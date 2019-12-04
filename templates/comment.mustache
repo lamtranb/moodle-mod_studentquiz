@@ -25,7 +25,8 @@
     Data attributes required for JS:
     * none
 }}
-<div class="studentquiz-comment-post" id="post{{id}}">
+<div class="studentquiz-comment-post {{#iscreator}}fromcreator{{/iscreator}}" id="post{{id}}" data-id="{{id}}">
+    <span id="c{{id}}" data-deleted="{{ deleted }}" data-numberofreply="{{numberofreply}}" data-authorid="{{authorid}}"></span>
     {{#deleted}}
         {{#canviewdeleted}}
             <div class="studentquiz-comment-post-outerbox">
@@ -89,18 +90,6 @@
                 </div>
                 <div class="studentquiz-comment-endpost"></div>
             </div>
-            <div class="studentquiz-comment-postfooter">
-                <div class="studentquiz-comment-commands-box">
-                    {{#canundelete}}
-                        <div class="studentquiz-comment-commands-buttons">
-                            <button class="btn studentquiz-comment-btnundelete{{^ispost}}reply{{/ispost}}"
-                                    title="{{#str}} undelete, mod_studentquiz, {{index}} {{/str}}">
-                                {{#str}} undelete, mod_studentquiz {{/str}}
-                            </button>
-                        </div>
-                    {{/canundelete}}
-                </div>
-            </div>
         {{/canviewdeleted}}
         {{^canviewdeleted}}
             <div class="studentquiz-comment-delete-message">
@@ -130,17 +119,7 @@
             <div class="studentquiz-comment-author">
                 <span class="studentquiz-comment-postdate">{{posttime}}</span>
                 <span> | </span>
-                {{#showauthor}}
-                    {{#isanon}}
-                        <strong class="studentquiz-comment-author-profile">{{authorname}}</strong>
-                    {{/isanon}}
-                    {{^isanon}}
-                        <a class="studentquiz-comment-author-profile" href="{{authorprofile}}">{{authorname}}</a>
-                    {{/isanon}}
-                {{/showauthor}}
-                {{#showmod}}
-                    <span class="studentquiz-comment-mod-label">{{#str}} moderator, mod_studentquiz{{/str}}</span>
-                {{/showmod}}
+                <a class="studentquiz-comment-author-profile" href="{{authorprofile}}">{{authorname}}</a>
                 {{#ispost}}
                     {{#expanded}}
                         <a class="studentquiz-comment-collapselink" href="#" title="{{#str}} collapsecomment, mod_studentquiz {{/str}}">
@@ -157,11 +136,6 @@
                     {{/expanded}}
                 {{/ispost}}
             </div>
-            {{#canviewanonpost}}
-                <div class="studentquiz-comment-anon-message">
-                    {{#str}}createdbymoderator, mod_studentquiz, <a href='{{authorprofile}}'>{{authorname}}</a> {{/str}}
-                </div>
-            {{/canviewanonpost}}
             <div class="studentquiz-comment-text">
                 {{#expanded}}
                     {{{content}}}

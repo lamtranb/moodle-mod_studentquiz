@@ -16,7 +16,6 @@
 
 namespace mod_studentquiz\commentarea;
 
-
 defined('MOODLE_INTERNAL') || die;
 
 use MoodleQuickForm_editor;
@@ -30,16 +29,36 @@ use MoodleQuickForm_editor;
  */
 class comment_simple_editor extends MoodleQuickForm_editor {
 
+    const ATTO_TOOLBAR = 'style1 = bold, italic
+        style2 = link, unlink
+        style3 = superscript, subscript
+        style4 = unorderedlist, orderedlist
+        style5 = html';
+
+    const ATTRIBUTES = [
+            'cols' => 60,
+            'rows' => 10,
+            'class' => 'comment_editor_container'
+    ];
+
+    const OPTIONS = [
+            'noclean' => VALUE_DEFAULT,
+            'trusttext' => VALUE_DEFAULT
+    ];
+
+
     /**
      * comment_simple_editor constructor.
      *
-     * @param null $elementname - Name of element
-     * @param null $elementlabel - Label of element
-     * @param null $attributes - Attributes of element
-     * @param null $options - Options of element
+     * @param null $elementname - Name of element.
+     * @param null $elementlabel - Label of element.
+     * @param array $attributes - Attributes of element.
+     * @param array $options - Options of element.
      */
-    public function __construct($elementname = null, $elementlabel = null, $attributes = null, $options = null) {
-        $this->_options['atto:toolbar'] = '';
+    public function __construct($elementname = null, $elementlabel = null, $attributes = [], $options = []) {
+        $attributes = array_merge($attributes, self::ATTRIBUTES);
+        $options = array_merge($options, self::OPTIONS) ;
+        $this->_options['atto:toolbar'] = self::ATTO_TOOLBAR;
         parent::__construct($elementname, $elementlabel, $attributes, $options);
     }
 }

@@ -43,7 +43,7 @@ define(['jquery', 'core/ajax'], function($, Ajax) {
             });
 
             // On CLICK check if student submitted result and has rated if not abort and show error for rating.
-            $('input[name="next"], input[name="previous"], input[name="finish"]').off('click').on('click', function(e) {
+            $('input[name="next"], input[name="previous"], input[name="finish"]').off('click').on('click', function() {
                 var $that = $(this);
                 var afterquestion = !$('.im-controls input[type="submit"]').length ||
                     $('.im-controls input[type="submit"]').filter(function() {
@@ -51,7 +51,7 @@ define(['jquery', 'core/ajax'], function($, Ajax) {
                     }).is(':disabled');
                 if (afterquestion) {
                     var hasrated = $('.rating span').hasClass('star');
-
+                    var hascommented = $('.studentquiz-comment-replies > div.studentquiz-comment-post').hasClass('fromcreator');
                     if (forcerating) {
                         if (!hasrated) {
                             $('.studentquiz_behaviour > .rate > .rate_error').removeClass('hide');
@@ -59,21 +59,16 @@ define(['jquery', 'core/ajax'], function($, Ajax) {
                             $('.studentquiz_behaviour .rate .rating .rateable:first-child').focus();
                         }
                     }
-                    e.preventDefault();
-                    $that.attr("disabled", true);
-                    var checkComment = t.checkHasComment();
-                    return checkComment.done(function(check) {
-                        if (!check) {
+                    if (forcecommenting) {
+                        if (!hascommented) {
                             $(commentErrorsSelector).removeClass('hide');
-                        } else {
-                            $(commentErrorsSelector).addClass('hide');
                         }
-                        $that.attr("disabled", false);
-                        if ((!forcerating || hasrated) && check === true) {
-                            $that.unbind('click');
-                            $that.click();
-                        }
-                    });
+                    }
+                    if ((!forcerating || hasrated) && (!forcecommenting || hascommented)) {
+                        $that.submit();
+                        return true;
+                    }
+                    return false;
                 } else {
                     $that.submit();
                     return true;
@@ -116,22 +111,6 @@ define(['jquery', 'core/ajax'], function($, Ajax) {
                     $('.studentquiz_behaviour > .rate > .rate_error').addClass('hide');
                 }
             );
-        },
-
-        checkHasComment: function() {
-            var form = $('.comment-area-form');
-            var questionId = form.find("input[name='questionid']").val();
-            var cmid = form.find("input[name='cmid']").val();
-            var promises = Ajax.call([{
-                methodname: 'mod_studentquiz_has_comments',
-                args: {
-                    questionid: parseInt(questionId),
-                    cmid: parseInt(cmid)
-                },
-            }]);
-            return promises[0].then(function(response) {
-                return response.exists;
-            });
         }
     };
     return t;

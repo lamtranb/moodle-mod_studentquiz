@@ -46,7 +46,7 @@ class utils {
                 'authorid' => new external_value(PARAM_INT, 'ID of the user who created this comment'),
                 'authorprofile' => new external_value(PARAM_TEXT, 'Author profile URL'),
                 'posttime' => new external_value(PARAM_RAW, 'Comment create time'),
-                'lastedittime' => new external_value(PARAM_RAW, 'Comment last edit time'),
+                'deleted' => new external_value(PARAM_BOOL, 'Comment is deleted or not'),
                 'deletedtime' => new external_value(PARAM_RAW, 'Comment edited time, if not deleted return 0'),
                 'deleteuser' => new external_single_structure([
                         'id' => new external_value(PARAM_TEXT, 'ID of delete user'),
@@ -54,88 +54,16 @@ class utils {
                         'lastname' => new external_value(PARAM_TEXT, 'Delete user last name'),
                         'profileurl' => new external_value(PARAM_RAW, 'URL lead to delete user profile page'),
                 ]),
-                'canedit' => new external_value(PARAM_BOOL, 'Can edit this comment or not.'),
                 'candelete' => new external_value(PARAM_BOOL, 'Can delete this comment or not.'),
                 'canreport' => new external_value(PARAM_BOOL, 'Can report this comment or not.'),
-                'canundelete' => new external_value(PARAM_BOOL, 'Can undelete this comment or not.'),
                 'canviewdeleted' => new external_value(PARAM_BOOL, 'Can view deleted comment.'),
                 'canreply' => new external_value(PARAM_BOOL, 'Can reply this comment or not.'),
                 'reportlink' => new external_value(PARAM_RAW, 'Link lead to report page.', VALUE_DEFAULT, ''),
                 'rownumber' => new external_value(PARAM_INT, 'Row number of comment.'),
-                'iscreator' => new external_value(PARAM_BOOL, 'Check if this comment belongs to current logged in user.')
+                'iscreator' => new external_value(PARAM_BOOL, 'Check if this comment belongs to current logged in user.'),
+                'ispost' => new external_value(PARAM_BOOL, 'Check if is comment or reply.'),
+                'plural' => new external_value(PARAM_BOOL, 'Check if text reply is plural.')
         ];
-    }
-
-    /**
-     * Loops through all the fields of an object, removing those which begin
-     * with a given prefix, and setting them as fields of a new object.
-     * @param &$object object Object
-     * @param $prefix string Prefix e.g. 'prefix_'
-     * @return object Object containing all the prefixed fields (without prefix)
-     */
-    public static function extract_subobject(&$object, $prefix) {
-        $result = [];
-        foreach ((array)$object as $key => $value) {
-            if (strpos($key, $prefix) === 0) {
-                $result[substr($key, strlen($prefix))] = $value;
-                unset($object->{$key});
-            }
-        }
-        return (object)$result;
-    }
-
-    /**
-     * Used when selecting users inside other SQL statements.
-     * Returns list of fields suitable to go within the SQL SELECT block. For
-     * example, if the alias is 'fu', one field will be fu.username AS fu_username.
-     * Note, does not end in a comma.
-     * @param string $alias Alias of table to extract
-     * @param bool $includemailfields If true, includes additional fields
-     *   needed for sending emails
-     * @return string SQL select fields (no comma at start or end)
-     */
-    public static function select_username_fields($alias, $includemailfields = false) {
-        return self::select_fields(
-                self::get_username_fields($includemailfields), $alias);
-    }
-
-    /**
-     * Makes a list of fields with alias in front.
-     * @param $fields
-     * @param string $alias - Table alias (also used as field prefix) - leave blank for none
-     * @return mixed
-     */
-    private static function select_fields($fields, $alias = '') {
-        $result = '';
-        if ($alias === '') {
-            $fieldprefix = '';
-            $nameprefix = '';
-        } else {
-            $fieldprefix = $alias . '.';
-            $nameprefix = $alias . '_';
-        }
-        foreach ($fields as $field) {
-            if ($result) {
-                $result .= ',';
-            }
-            $result .= $fieldprefix . $field . ' as ' . $nameprefix . $field;
-        }
-        return $result;
-    }
-
-    /**
-     * @param bool $includemailfields If true, includes email fields (loads)
-     * @return array List of all field names in mdl_user to include
-     */
-    public static function get_username_fields($includemailfields = false) {
-        // Get core user name fields, for use with fullname etc.
-        $namefields = get_all_user_name_fields();
-        $fields = array_merge(['id', 'username', 'picture', 'url', 'imagealt', 'idnumber', 'email'], $namefields);
-        $emailfields = ['maildisplay', 'mailformat', 'maildigest', 'emailstop', 'deleted', 'auth', 'timezone', 'lang'];
-        if ($includemailfields) {
-            $fields = array_merge($fields, $emailfields);
-        }
-        return array_unique($fields);
     }
 
     /**
@@ -173,5 +101,46 @@ class utils {
         $studentquiz = mod_studentquiz_load_studentquiz($cmid, $context->id);
         $question = \question_bank::load_question($questionid);
         return [$question, $cm, $context, $studentquiz];
+    }
+
+    /**
+     * Count comments and replies.
+     *
+     * @param array $data
+     * @return array
+     */
+    public static function count_comments_and_replies($data) : array {
+        $postcount = 0;
+        $deletepostcount = 0;
+        $replycount = 0;
+        $deletereplycount = 0;
+
+        if (!is_array($data)) {
+            $data = [$data];
+        }
+
+        if (count($data) > 0) {
+            foreach ($data as $k => $v) {
+                if ($v->deletedtime === 0) {
+                    $postcount++;
+                } else {
+                    $deletepostcount++;
+                }
+                if (count($v->replies) > 0) {
+                    foreach($v->replies as $reply) {
+                        if ($reply->deletedtime === 0) {
+                            $replycount++;
+                        } else {
+                            $deletereplycount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_merge(compact('postcount', 'deletepostcount', 'replycount', 'deletereplycount'), [
+                'total' => $postcount + $replycount,
+                'totaldelete' => $deletepostcount + $deletereplycount
+        ]);
     }
 }

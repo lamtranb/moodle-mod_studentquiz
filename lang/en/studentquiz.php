@@ -435,8 +435,6 @@ $string['deletedbyuser'] = 'This comment was deleted by {$a->user} on {$a->date}
 $string['deletedcomment'] = 'Deleted comment.';
 $string['moderator'] = 'Moderator';
 
-$string['createdbymoderator'] = 'This is a comment created by moderator {$a} with their name hidden from students.';
-
 $string['cannotcreatereply'] = 'Cannot create comment';
 $string['cannotgetcomment'] = 'Cannot get comment';
 $string['error_form_validation'] = '{$a}';
@@ -454,3 +452,4 @@ $string['describe_not_creator'] = 'This is not your comment.';
 $string['message'] = 'Message';
 $string['add_comment'] = 'Add comment';
 $string['add_reply'] = 'Add reply';
+$string['current_of_total'] = '{$a->current} of {$a->total}';

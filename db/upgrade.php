@@ -547,33 +547,21 @@ function xmldb_studentquiz_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2019071700, 'studentquiz');
     }
 
-    if ($oldversion < 2019110500) {
+    if ($oldversion < 2019113000) {
 
         $table = new xmldb_table('studentquiz_comment');
-        $field = new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'comment');
-        $index = new xmldb_index('parentidindex', XMLDB_INDEX_NOTUNIQUE, array('parentid'));
+        $field = new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '1', null, true, null, 0, 'comment');
+        $index = new xmldb_index('parentidindex', XMLDB_INDEX_NOTUNIQUE, ['parentid']);
         if (!$dbman->field_exists($table, $field)) {
             // Add parentid field.
             $dbman->add_field($table, $field);
-
             // Add index to parentid field.
             if (!$dbman->index_exists($table, $index)) {
                 $dbman->add_index($table, $index);
             }
         }
 
-        // Add modified.
-        $field = new xmldb_field('modified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0, 'created');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
         $field = new xmldb_field('deleted', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0, 'modified');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
-        $field = new xmldb_field('edituserid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'deleted');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
@@ -583,8 +571,7 @@ function xmldb_studentquiz_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
 
-        upgrade_mod_savepoint(true, 2019110500, 'studentquiz');
+        upgrade_mod_savepoint(true, 2019113000, 'studentquiz');
     }
-
     return true;
 }

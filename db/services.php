@@ -65,23 +65,7 @@ $functions = [
                 'description' => 'Delete comment',
                 'type'        => 'write',
                 'ajax'        => true
-        ],
-        // Undelete comment.
-        'mod_studentquiz_undelete_comment' => [
-                'classname'   => 'mod_studentquiz\local\external\undelete_comment',
-                'methodname'  => 'undelete_comment',
-                'description' => 'Undelete comment',
-                'type'        => 'write',
-                'ajax'        => true
-        ],
-        // Check if current user has comment.
-        'mod_studentquiz_has_comments' => [
-                'classname'   => 'mod_studentquiz\local\external\has_comments',
-                'methodname'  => 'has_comments',
-                'description' => 'Check if current user has comments',
-                'type'        => 'read',
-                'ajax'        => true
-        ],
+        ]
 ];
 $services = [
         'StudentQuiz services' => [

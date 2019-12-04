@@ -113,7 +113,7 @@ Feature: Create comment as an user
     And I should see "Reply" in the ".studentquiz-comment-post:nth-child(1) .studentquiz-comment-totalreply" "css_element"
 
   @javascript
-  Scenario: Test delete/undelete comment feature.
+  Scenario: Test delete comment feature.
     # Save document into course 1.
     Given I log in as "admin"
     And I am on "Course 1" course homepage
@@ -131,17 +131,8 @@ Feature: Create comment as an user
     #    # Click by using title attribute otherwise the browser will click on "Delete and email" button.
     And I click on "[title='Delete comment']" "css_element" in the ".modal.show" "css_element"
     # Check comment is render as deleted and global count updated.
-    Then I should see "Undelete" in the ".studentquiz-comment-post:nth-child(1)" "css_element"
-    And I should see "Deleted comment" in the ".studentquiz-comment-post:nth-child(1) .studentquiz-comment-post-outerbox" "css_element"
+    Then I should see "Deleted comment" in the ".studentquiz-comment-post:nth-child(1) .studentquiz-comment-post-outerbox" "css_element"
     And I should see "0 of 0"
-    # Try to undelete post.
-    When I click on "Undelete" "button" in the ".studentquiz-comment-post:nth-child(1)" "css_element"
-    And I click on "[title='Undelete comment']" "css_element" in the ".modal.show" "css_element"
-    # check if comment is re-render
-    Then I should see "Comment 1"
-    And I should see "Delete" in the ".studentquiz-comment-post:nth-child(1)" "css_element"
-    And I should see "Reply" in the ".studentquiz-comment-post:nth-child(1)" "css_element"
-    And I should see "1 of 1"
 
   @javascript
   Scenario: Test force comment (as student)
@@ -179,8 +170,7 @@ Feature: Create comment as an user
     #    # Click by using title attribute otherwise the browser will click on "Delete and email" button.
     And I click on "[title='Delete comment']" "css_element" in the ".modal.show" "css_element"
     # Check comment is render as deleted and global count updated.
-    Then I should see "Undelete" in the ".studentquiz-comment-post:nth-child(1)" "css_element"
-    And I should see "Deleted comment" in the ".studentquiz-comment-post:nth-child(1) .studentquiz-comment-post-outerbox" "css_element"
+    Then I should see "Deleted comment" in the ".studentquiz-comment-post:nth-child(1) .studentquiz-comment-post-outerbox" "css_element"
     And I should see "0 of 0"
     And I log out
     # Student log in and see it or not

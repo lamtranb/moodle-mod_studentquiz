@@ -22,7 +22,7 @@ use external_single_structure;
 use external_multiple_structure;
 use external_value;
 use mod_studentquiz\commentarea\comment;
-use mod_studentquiz\commentarea\question;
+use mod_studentquiz\commentarea\container;
 use mod_studentquiz\utils;
 
 defined('MOODLE_INTERNAL') || die();
@@ -69,7 +69,7 @@ class get_comments extends external_api {
 
         return new external_single_structure([
                 'total' => new external_value(PARAM_INT, 'Total comments belong to this question'),
-                'data' => new external_multiple_structure(new external_single_structure($repliesstructure), 'array data of comments')
+                'data' => new external_multiple_structure(new external_single_structure($repliesstructure), 'comments array')
         ]);
     }
 
@@ -91,13 +91,13 @@ class get_comments extends external_api {
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
 
-        $commentarea = new question($studentquiz, $question, $cm, $context);
-        $comments = $commentarea->get_comments($numbertoshow);
+        $commentarea = new container($studentquiz, $question, $cm, $context);
+        $comments = $commentarea->fetch_all($numbertoshow);
 
         $data = [];
 
+        /** @var comment $comment */
         foreach ($comments as $key => $comment) {
-            /** @var comment $comment */
             $item = $comment->convert_to_object();
             $item->replies = [];
             if ($numbertoshow == 0) {

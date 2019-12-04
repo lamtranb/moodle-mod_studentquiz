@@ -560,6 +560,10 @@
     border-top: 1px solid #bfe2ef;
 }
 
+.studentquiz-comment-container .studentquiz-comment-post.highlight {
+    background: #def2f8;
+}
+
 .studentquiz-comment-container .studentquiz-comment-post.studentquiz-comment-post-important {
     border: 2px solid #0B55A8;
     padding: 5px;
@@ -639,8 +643,10 @@
 }
 
 .studentquiz-comment-container .studentquiz-comment-postfooter {
-    margin: 12px 0 16px 54px;
     text-align: right;
+    display: inline-block;
+    width: 100%;
+    padding: 12px 0 16px 54px;
 }
 
 .studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-commands-buttons {

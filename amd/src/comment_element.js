@@ -34,7 +34,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 btnpostreply: null,
                 subjectselector: null,
                 introselector: null,
-                postcontainerselector: null,
+                containerselector: null,
                 courseid: null,
                 questionid: null,
                 idnumber: null,
@@ -46,31 +46,30 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 userId: null,
                 langstring: {},
                 deleteDialog: null,
-                undeleteDialog: null,
                 posttodelete: null,
-                posttoundelete: null,
                 // Checked before placeholder is set.
                 hasExpanded: false,
                 // Checked before placeholder is set.
                 canAddPlaceHolder: true,
                 emptyContent: ['<br><p><br></p>', '<p><br></p>', '<br>', ''],
-                // Store highlight post field for use in case it is removed then added back dynamically.
-                formhighlightcontent: null,
                 numberToShow: 5,
-
+                cmid: null,
                 TEMPLATE_COMMENTS: 'mod_studentquiz/comments',
                 TEMPLATE_COMMENT: 'mod_studentquiz/comment',
-                cmid: null,
                 ACTION_CREATE: 'mod_studentquiz_create_comment',
+                ACTION_CREATE_REPLY: 'mod_studentquiz_create_reply',
                 ACTION_GET_ALL: 'mod_studentquiz_get_comments',
                 ACTION_EXPAND: 'mod_studentquiz_expand_comment',
                 ACTION_DELETE: 'mod_studentquiz_delete_comment',
-                ACTION_UNDELETE: 'mod_studentquiz_undelete_comment',
                 ACTION_LOAD_FRAGMENT_FORM: 'mod_studentquiz_load_fragment_form',
                 ROOT_COMMENT_VALUE: 0,
+                countServerData: [],
+                noCommentSelector: null,
+                lastcurrentcount: 0,
+                lasttotal:0,
 
                 /*
-                 * Init function, this need to be called first to init the iPud element.
+                 * Init function.
                  * */
                 init: function(params) {
                     var self = this;
@@ -81,7 +80,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     self.postreply = self.elementselector.find('#id_submitbutton');
                     self.subjectselector = self.elementselector.find('.studentquiz-comment-subject');
                     self.introselector = self.elementselector.find('.studentquiz-comment-introduction');
-                    self.postcontainerselector = self.elementselector.find('.studentquiz-comment-replies');
+                    self.containerselector = self.elementselector.find('.studentquiz-comment-replies');
                     self.postcountselector = self.elementselector.find('.studentquiz-comment-postcount');
                     self.loadingicon = self.elementselector.find('.studentquiz-comment-loading');
                     self.courseid = params.courseid;
@@ -92,6 +91,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     self.userId = parseInt(params.userid);
                     self.numberToShow = parseInt(params.numbertoshow);
                     self.cmid = parseInt(params.cmid);
+                    self.countServerData = {
+                        count: params.count,
+                        total: params.total
+                    };
+                    self.noCommentSelector = self.elementselector.find('.no-comment');
 
                     // Get all language string in one go.
                     str.get_strings([
@@ -100,32 +104,69 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         {'key': 'confirmdeletecomment', component: 'mod_studentquiz'},
                         {'key': 'delete', component: 'mod_studentquiz'},
                         {'key': 'cancel', component: 'core'},
-                        {'key': 'undelete', component: 'mod_studentquiz'},
-                        {'key': 'confirmundeletecomment', component: 'mod_studentquiz'},
                         {'key': 'reply', component: 'mod_studentquiz'},
                         {'key': 'replies', component: 'mod_studentquiz'},
                         {'key': 'editorplaceholder', component: 'mod_studentquiz'},
                         {'key': 'moderator', component: 'mod_studentquiz'},
                         {'key': 'important_ipud', component: 'mod_studentquiz'},
-                        {'key': 'undeletecomment', component: 'mod_studentquiz'},
                     ]).done(function(s) {
                         self.langstring.required = s[0];
                         self.langstring.deletecomment = s[1];
                         self.langstring.confirmdelete = s[2];
                         self.langstring.delete = s[3];
                         self.langstring.cancel = s[4];
-                        self.langstring.undelete = s[5];
-                        self.langstring.confirmundelete = s[6];
-                        self.langstring.reply = s[7];
-                        self.langstring.replies = s[8];
-                        self.langstring.editorplaceholder = s[9];
-                        self.langstring.moderator = s[10];
-                        self.langstring.highlighted = s[11];
-                        self.langstring.undeletecomment = s[12];
+                        self.langstring.reply = s[5];
+                        self.langstring.replies = s[6];
+                        self.langstring.editorplaceholder = s[7];
+                        self.langstring.moderator = s[8];
+                        self.langstring.highlighted = s[9];
                     });
 
-                    this.initCommentArea();
+                    this.initServerRender();
                     this.bindEvents();
+                },
+
+                initServerRender: function() {
+                    var self = this;
+                    var el = self.containerselector;
+                    $( ".studentquiz-comment-post" ).each(function() {
+                        var id = $(this).data('id');
+                        var attrs = $(this).find("#c" + id);
+                        var comment = {
+                            id: id,
+                            deleted: attrs.data('deleted'),
+                            numberofreply: attrs.data('numberofreply'),
+                            // Init from server has collapsed state.
+                            expand: false,
+                            // Init from server only show root comments.
+                            replies: [],
+                            ispost: true,
+                            authorid: attrs.data('authorid')
+                        };
+                        self.bindCommentEvent(comment);
+                    });
+
+                    self.changeWorkingState(true);
+
+                    self.btncollapseall.hide();
+                    self.btnexpandall.hide();
+                    self.btnexpandall.prop('disabled', true);
+
+                    var count = self.countServerData.count;
+                    var postcount = count.postcount;
+                    var postdeleted = count.totaldelete;
+
+                    // Only show expand button and count if comment existed.
+                    if (postcount !== 0 || postdeleted !== 0) {
+                        self.btnexpandall.show();
+                        self.updateCommentCount(postcount, self.countServerData.total);
+                    } else {
+                        // No comment found hide loading icon.
+                        self.updateCommentCount(0, 0);
+                    }
+                    self.changeWorkingState(false);
+
+                    self.initBindEditor();
                 },
 
                 /*
@@ -137,45 +178,25 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                     self.changeWorkingState(true);
 
-                    self.postcontainerselector.empty();
+                    self.containerselector.empty();
                     self.btncollapseall.hide();
                     self.btnexpandall.hide();
                     self.btnexpandall.prop('disabled', true);
                     self.postcountselector.empty();
                     self.loadingicon.show();
 
-                    var highlightel = self.formselector.find('#id_setimportant');
-                    if (highlightel.length) {
-                        // Different theme form layouts.
-                        highlightel = highlightel.closest('#fitem_id_setimportant, .fitem');
-                    }
-                    if (!self.formhighlightcontent && highlightel.length) {
-                        // Store highlight post field for use in case it is removed then added dynamically.
-                        self.formhighlightcontent = highlightel.prop('outerHTML');
-                    }
-
-                    // Interval to init atto editor, there are time when Atto's Javascript slow to init the editor, so we
-                    // check interval here to make sure the Atto is init before calling our script.
-                    var interval = setInterval(function() {
-                        if (self.formselector.find('.editor_atto_content').length !== 0) {
-                            self.initAttoEditor(self.formselector);
-                            clearInterval(interval);
-                        }
-                    }, 500);
-
-                    this.bindEditorEvent(self.formselector);
+                    self.initBindEditor();
 
                     M.util.js_pending(self.ACTION_GET_ALL);
                     self.getComments(self.questionid, self.numberToShow, function(response) {
                         // Calculate length to display the post count.
-                        var count = self.countpostsandreplies(response.data);
+                        var count = self.countCommentAndReplies(response.data);
                         var postcount = count.postcount;
                         var postdeleted = count.totaldelete;
 
-                        // Only show expand button and post count if post existed.
+                        // Only show expand button and count if comment existed.
                         if (postcount !== 0 || postdeleted !== 0) {
                             self.btnexpandall.show();
-                            response.data.reverse();
                             self.updateCommentCount(postcount, response.total);
                             self.renderComment(response.data, false);
                         } else {
@@ -188,16 +209,29 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     });
                 },
 
-                /*
-                 * Bind the neccessary event to the button display when first time init the page like "Expand all post",
-                 * "Collapse all post", "Post reply" group selector...
-                 * */
+                initBindEditor: function() {
+                    var self = this;
+                    // Interval to init atto editor, there are time when Atto's Javascript slow to init the editor, so we
+                    // check interval here to make sure the Atto is init before calling our script.
+                    var interval = setInterval(function () {
+                        if (self.formselector.find('.editor_atto_content').length !== 0) {
+                            self.initAttoEditor(self.formselector);
+                            clearInterval(interval);
+                        }
+                    }, 500);
+
+                    this.bindEditorEvent(self.formselector);
+                },
+
+                /**
+                 * Bind events: "Expand all comments", "Collapse all comments", "Add Reply"
+                 */
                 bindEvents: function() {
                     var self = this;
-                    // Bind event to "Expand all posts" button.
+                    // Bind event to "Expand all comments" button.
                     this.btnexpandall.click(function() {
                         // Empty the replies section to append new response.
-                        self.postcontainerselector.empty();
+                        self.containerselector.empty();
 
                         // Change button from expand to collapse collapse and disabled button since we don't want user to
                         // press the button when javascript is appending item or ajax is working.
@@ -206,16 +240,25 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.loadingicon.show();
                         self.changeWorkingState(true);
                         self.lastfocuselement = self.btncollapseall;
-                        M.util.js_pending('question_get_comments');
+                        M.util.js_pending(self.ACTION_GET_ALL);
                         self.getComments(self.questionid, 0, function(response) {
                             // Calculate length to display the post count.
-                            var count = self.countpostsandreplies(response.data);
+                            var count = self.countCommentAndReplies(response.data);
                             var total = count.total;
-
                             self.updateCommentCount(total, response.total);
                             self.renderComment(response.data, true);
-                            M.util.js_complete('question_get_comments');
+                            M.util.js_complete(self.ACTION_GET_ALL);
                         });
+                    });
+
+                    // Bind event to "Collapse all comments" button.
+                    this.btncollapseall.click(function() {
+                        self.loadingicon.show();
+                        self.btncollapseall.hide();
+                        self.containerselector.empty();
+                        self.btnexpandall.show();
+                        self.lastfocuselement = self.btnexpandall;
+                        self.initCommentArea();
                     });
 
                     // Bind to prevent form perform normal submit.
@@ -223,18 +266,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         e.preventDefault();
                     });
 
-                    // Bind event to "Collapse all posts" button.
-                    this.btncollapseall.click(function() {
-                        self.loadingicon.show();
-                        // If group selector exist then use the groupid to reload.
-                        self.btncollapseall.hide();
-                        self.postcontainerselector.empty();
-                        self.btnexpandall.show();
-                        self.lastfocuselement = self.btnexpandall;
-                        self.initCommentArea();
-                    });
-
-                    // Bind event to "Post reply" button.
+                    // Bind event to "Add Reply" button.
                     this.postreply.click(function() {
                         var unique = self.questionid + '_' + self.ROOT_COMMENT_VALUE;
                         var formdata = self.convertFormToJson(self.formselector);
@@ -281,16 +313,19 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                     }
                                 }
                             }
-                            self.appendpost(response, self.elementselector.find('.studentquiz-comment-replies'));
+                            self.appendComment(response, self.elementselector.find('.studentquiz-comment-replies'));
                         });
                         return true;
                     });
                 },
 
-                /*
-                 * Call the web service to get the posts, when nubmertoshow = 0, this function will get all post along
-                 * with its replies, if failed will display the error dialog, if passed will call the third parameter.
-                 * */
+                /**
+                 * Call the web service to get the comments, when nubmertoshow = 0, this function will get all comment with its replies.
+                 *
+                 * @param questionId
+                 * @param numberToShow
+                 * @param callback
+                 */
                 getComments: function(questionId, numberToShow, callback) {
                     var self = this;
                     ajax.call([{
@@ -305,10 +340,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     }]);
                 },
 
-                /*
-                * Show the error dialog, this function will call to showDialog() but with title is error local string
-                * get from server.
-                * */
+                /**
+                 * Show error which call showDialog().
+                 *
+                 * @param message
+                 */
                 showError: function(message) {
                     var self = this;
                     // Get error string for title.
@@ -319,9 +355,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     });
                 },
 
-                /*
-                * Show the dialog with custom title and body.
-                * */
+                /**
+                 * Show the dialog with custom title and body.
+                 *
+                 * @param title
+                 * @param body
+                 */
                 showDialog: function(title, body) {
                     var self = this;
                     if (self.dialogue) {
@@ -365,18 +404,25 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     }
 
                     // Get the postof local string and display.
-                    var s = str.get_string('postof', 'filter_ipud', {
+                    var s = str.get_string('current_of_total', 'studentquiz', {
                         current: current,
                         total: total
                     });
+                    if ($('.studentquiz-comment-post').length > 0) {
+                        self.noCommentSelector.hide();
+                    }
                     $.when(s).done(function(localizedstring) {
                         self.postcountselector.text(localizedstring);
                     });
                 },
 
-                /*
-                * Request template then append it into the page.
-                * */
+                /**
+                 * Request template then append it into the page.
+                 *
+                 * @param comments
+                 * @param expanded
+                 * @returns {boolean}
+                 */
                 renderComment: function(comments, expanded) {
                     var self = this;
 
@@ -386,12 +432,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         comments: comments
                     }).done(function(html) {
                         var el = $(html);
-                        self.postcontainerselector.append(el);
+                        self.containerselector.append(el);
                         // Loop to bind event.
                         var i = 0;
                         for (i; i < comments.length; i++) {
-                            var comment = comments[i];
-                            self.bindCommentEvent(comment, el);
+                            self.bindCommentEvent(comments[i]);
                         }
                         self.changeWorkingState(false);
                         self.loadingicon.hide();
@@ -400,11 +445,14 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     return false;
                 },
 
-                /*
-                * Bind event to comment's report, reply, edit and expand button.
-                * */
-                bindCommentEvent: function(data, element) {
+                /**
+                 * Bind event to comment: report, reply, expand, collapse button.
+                 *
+                 * @param data
+                 */
+                bindCommentEvent: function(data) {
                     var self = this;
+                    var element = self.containerselector;
                     // Loop comments and replies to get id and bind event for button inside it.
                     var el = element.find('#post' + data.id);
                     var i = 0;
@@ -413,15 +461,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.bindReplyEvent(reply, el);
                     }
                     el.find('.studentquiz-comment-btndelete').click(function(e) {
-                        self.bindpostdeleteevent(data);
+                        self.bindDeleteEvent(data);
                         e.preventDefault();
-                    });
-                    el.find('.studentquiz-comment-btnundelete').click(function(e) {
-                        self.bindpostundeleteevent(data);
-                        e.preventDefault();
-                    });
-                    el.find('.studentquiz-comment-btnreport').click(function() {
-                        // TODO: Implement report button for post.
                     });
                     el.find('.studentquiz-comment-btnreply').click(function(e) {
                         e.preventDefault();
@@ -440,18 +481,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 /*
                 * Bind event to reply's report and edit button.
                 * */
-                bindReplyEvent: function(reply, postselector) {
+                bindReplyEvent: function(reply, el) {
                     var self = this;
-                    var replyselector = postselector.find('#post' + reply.id);
-                    replyselector.find('.studentquiz-comment-btnreportreply').click(function() {
-                        // TODO: Implement report button for reply.
-                    });
+                    var replyselector = el.find('#post' + reply.id);
                     replyselector.find('.studentquiz-comment-btndeletereply').click(function(e) {
-                        self.bindpostdeleteevent(reply);
-                        e.preventDefault();
-                    });
-                    replyselector.find('.studentquiz-comment-btnundeletereply').click(function(e) {
-                        self.bindpostundeleteevent(reply);
+                        self.bindDeleteEvent(reply);
                         e.preventDefault();
                     });
                 },
@@ -465,9 +499,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 * */
                 changeWorkingState: function(working) {
                     var self = this;
-
                     if (working) {
-                        // Disable/Hide action element in this iPud element.
                         self.btnexpandall.prop('disabled', true);
                         self.btncollapseall.prop('disabled', true);
                         self.elementselector.find('.studentquiz-comment-btnreport').prop('disabled', true);
@@ -476,23 +508,17 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.elementselector.find('.studentquiz-comment-btnedit').attr('tabindex', -1);
                         self.elementselector.find('.studentquiz-comment-btndelete').prop('disabled', true);
                         self.elementselector.find('.studentquiz-comment-btndeletereply').prop('disabled', true);
-                        self.elementselector.find('.studentquiz-comment-btnundelete').prop('disabled', true);
-                        self.elementselector.find('.studentquiz-comment-btnundeletereply').prop('disabled', true);
                         self.elementselector.find('.studentquiz-comment-btnreport').prop('disabled', true);
                         self.elementselector.find('.studentquiz-comment-btneditreply').addClass('disabled');
                         self.elementselector.find('.studentquiz-comment-btneditreply').attr('tabindex', -1);
                         self.elementselector.find('.studentquiz-comment-expandlink').css('visibility', 'hidden');
                         self.elementselector.find('.studentquiz-comment-collapselink').css('visibility', 'hidden');
-                        // Disabled delete/undelete button in the dialog when making call to server to prevent
+                        // Disabled delete button in the dialog when making call to server to prevent
                         // user clicking too fast, which made Ajax request send multiple time.
                         if (self.deleteDialog) {
                             self.deleteDialog.getFooter().find('button[data-action="yes"]').prop('disabled', true);
                             self.deleteDialog.getFooter().find('button[data-action="yesandemail"]').prop('disabled', true);
                         }
-                        if (self.undeleteDialog) {
-                            self.undeleteDialog.getFooter().find('button[data-action="yes"]').prop('disabled', true);
-                        }
-
                         self.postreply.prop('disabled', true);
                     } else {
                         // Enable/Show action element in this iPud element.
@@ -504,23 +530,16 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.elementselector.find('.studentquiz-comment-btnedit').removeAttr('tabindex');
                         self.elementselector.find('.studentquiz-comment-btndelete').prop('disabled', false);
                         self.elementselector.find('.studentquiz-comment-btndeletereply').prop('disabled', false);
-                        self.elementselector.find('.studentquiz-comment-btnundelete').prop('disabled', false);
-                        self.elementselector.find('.studentquiz-comment-btnundeletereply').prop('disabled', false);
                         self.elementselector.find('.studentquiz-comment-btnreport').prop('disabled', false);
                         self.elementselector.find('.studentquiz-comment-btneditreply').removeClass('disabled');
                         self.elementselector.find('.studentquiz-comment-btneditreply').removeAttr('tabindex');
                         self.elementselector.find('.studentquiz-comment-expandlink').css('visibility', 'visible');
                         self.elementselector.find('.studentquiz-comment-collapselink').css('visibility', 'visible');
                         self.postreply.prop('disabled', false);
-
                         if (self.deleteDialog) {
                             self.deleteDialog.getFooter().find('button[data-action="yes"]').prop('disabled', false);
                             self.deleteDialog.getFooter().find('button[data-action="yesandemail"]').prop('disabled', false);
                         }
-                        if (self.undeleteDialog) {
-                            self.undeleteDialog.getFooter().find('button[data-action="yes"]').prop('disabled', false);
-                        }
-
                         if (self.lastfocuselement) {
                             self.lastfocuselement.focus();
                             self.lastfocuselement = null;
@@ -529,27 +548,27 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 },
 
                 /*
-                 * Count posts, deleted posts and replies.
+                 * Count comments, deleted comments and replies.
                  * */
-                countpostsandreplies: function(posts) {
+                countCommentAndReplies: function(data) {
                     var postcount = 0;
                     var deletepostcount = 0;
                     var replycount = 0;
                     var deletereplycount = 0;
 
-                    if (posts.constructor !== Array) {
-                        posts = [posts];
+                    if (data.constructor !== Array) {
+                        data = [data];
                     }
 
-                    for (var i = 0; i < posts.length; i++) {
-                        var post = posts[i];
-                        if (post.deletedtime === 0) {
+                    for (var i = 0; i < data.length; i++) {
+                        var item = data[i];
+                        if (item.deletedtime === 0) {
                             postcount++;
                         } else {
                             deletepostcount++;
                         }
-                        for (var j = 0; j < post.replies.length; j++) {
-                            var reply = post.replies[j];
+                        for (var j = 0; j < item.replies.length; j++) {
+                            var reply = item.replies[j];
                             if (reply.deletedtime === 0) {
                                 replycount++;
                             } else {
@@ -606,8 +625,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     self.expandComment(item.id, function(response) {
                         var convertedItem = self.convertForTemplate(response, true);
 
-                        // If student can't see deleted post in the reply, then remove them form array
-                        // to make iPud view consistency with ForumNG view.
+                        // If student can't see deleted comment in the reply, then remove them form array.
                         for (var i = 0; i < convertedItem.replies.length; i++) {
                             var reply = convertedItem.replies[i];
                             if (reply.deleted && !reply.canviewdeleted) {
@@ -616,29 +634,29 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             }
                         }
 
-                        // Count current reply displayed, because user can reply to this post then press expanded.
-                        var currentdisplaypost = itemSelector.find('.ipud_post-replies .studentquiz-comment-post').length;
+                        // Count current reply displayed, because user can reply to this comment then press expanded.
+                        var currentDisplayComment = itemSelector.find('.ipud_post-replies .studentquiz-comment-post').length;
 
-                        // Update discussion count, handle the case when another user add post then current user expand.
-                        var total = self.countpostsandreplies(convertedItem).replycount;
-                        var newcurrentcount = self.lastcurrentcount + total - currentdisplaypost;
+                        // Update count, handle the case when another user add post then current user expand.
+                        var total = self.countCommentAndReplies(convertedItem).replycount;
+                        var newcurrentcount = self.lastcurrentcount + total - currentDisplayComment;
                         var newtotalcount = self.lasttotal + (convertedItem.numberofreply - item.numberofreply);
 
-                        // Update count for case when student view the collapsed undeleted post, then manager delete
+                        // Update count for case when student view the collapsed undeleted comment, then manager delete
                         // and student expand (also vice versa).
-                        // Post deleted then un-deleted by someone else.
+                        // Comment deleted then un-deleted by someone else.
                         if (item.deleted && !convertedItem.deleted) {
                             newcurrentcount++;
                             newtotalcount++;
                         }
 
-                        // Normal post, then deleted by someone else.
+                        // Normal comment, then deleted by someone else.
                         if (!item.deleted && convertedItem.deleted) {
                             newcurrentcount--;
                             newtotalcount--;
                         }
 
-                        // If current show post == total mean that all post is shown.
+                        // If current show == total mean that all items is shown.
                         if (newcurrentcount === newtotalcount) {
                             self.btnexpandall.hide();
                             self.btncollapseall.show();
@@ -648,11 +666,9 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                         Templates.render(self.TEMPLATE_COMMENT, convertedItem).done(function(html) {
                             var el = $(html);
-                            // Replace the whole post in case this post have been edited by another
-                            // user or in another browser.
                             itemSelector.replaceWith(el);
                             self.lastfocuselement = el.find('.studentquiz-comment-collapselink');
-                            self.bindCommentEvent(response, el.parent());
+                            self.bindCommentEvent(response);
                             self.changeWorkingState(false);
                             M.util.js_complete(key);
                         });
@@ -665,66 +681,50 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 bindCollapseEvent: function(item) {
                     var self = this;
 
-                    var postselector = self.elementselector.find('#post' + item.id);
+                    var el = self.elementselector.find('#post' + item.id);
 
-                    // Minus the post currently show, exclude the deleted post, update main count.
-                    // Using DOM to count the reply exclude the deleted, when user delete the reply belong to this post,
-                    // current post object don't know that, so we using DOM in this case.
-                    var displaypostcount = postselector.find('.ipud_post-replies .studentquiz-comment-text').length;
-                    self.updateCommentCount(self.lastcurrentcount - displaypostcount, -1);
-                    // Assign back to post object in case user then collapse the post.
-                    item.numberofreply = displaypostcount;
+                    // Minus the comment currently show, exclude the deleted comment, update main count.
+                    // Using DOM to count the reply exclude the deleted, when user delete the reply belong to this comment,
+                    // current comment object don't know that, so we using DOM in this case.
+                    var commentCount = el.find('.ipud_post-replies .studentquiz-comment-text').length;
+                    self.updateCommentCount(self.lastcurrentcount - commentCount, -1);
+                    // Assign back to comment object in case user then collapse the comment.
+                    item.numberofreply = commentCount;
 
-                    // Remove reply for this post.
-                    postselector.find('.ipud_post-replies').empty();
+                    // Remove reply for this comment.
+                    el.find('.ipud_post-replies').empty();
 
-                    // Replace post content with short content.
+                    // Replace comment content with short content.
                     if (item.deleted) {
-                        postselector.find('.studentquiz-comment-delete-content').html(item.shortcontent);
+                        el.find('.studentquiz-comment-delete-content').html(item.shortcontent);
                     } else {
-                        postselector.find('.studentquiz-comment-text ').html(item.shortcontent);
+                        el.find('.studentquiz-comment-text ').html(item.shortcontent);
                     }
 
                     // Hide collapse and show expand icon.
-                    postselector.find('.studentquiz-comment-collapselink').hide();
-                    postselector.find('.studentquiz-comment-expandlink').show().focus();
+                    el.find('.studentquiz-comment-collapselink').hide();
+                    el.find('.studentquiz-comment-expandlink').show().focus();
 
-                    // Update post state.
+                    // Update state.
                     item.expanded = false;
                 },
 
                 convertForTemplate: function(data, expanded) {
+                    var self = this;
                     var single = false;
                     if (data.constructor !== Array) {
                         data = [data];
                         single = true;
                     }
-
                     var i = 0;
                     for (i; i < data.length; i++) {
                         var item = data[i];
-
-                        item.deleted = item.deletedtime !== 0;
-                        item.plural = item.numberofreply === 0 || item.numberofreply > 1;
                         item.expanded = expanded;
-                        item.showmod = item.ismoderator === 1 || item.ismoderator === 2;
-                        item.postasanonmod = item.ismoderator === 2;
-                        item.showauthor = !item.postasanonmod || (item.postasanonmod && item.canviewanon);
-                        item.canviewanonpost = item.postasanonmod && item.canviewanon;
-                        item.ispost = true;
-
                         var j = 0;
                         for (j; j < item.replies.length; j++) {
                             var reply = item.replies[j];
-                            reply.deleted = reply.deletedtime !== 0;
-                            reply.showmod = reply.ismoderator === 1 || reply.ismoderator === 2;
-                            reply.postasanonmod = reply.ismoderator === 2;
-                            reply.showauthor = !reply.postasanonmod || (reply.postasanonmod && reply.canviewanon);
-                            reply.canviewanonpost = reply.postasanonmod && reply.canviewanon;
-                            reply.ispost = false;
                         }
                     }
-
                     return single ? data[0] : data;
                 },
 
@@ -764,20 +764,20 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 },
 
                 /*
-                * Append post to the DOM, and call another function to bind the event into it.
+                * Append comment to the DOM, and call another function to bind the event into it.
                 * */
-                appendpost: function(post, targetselector, isreply) {
+                appendComment: function(item, target, isReply) {
                     var self = this;
 
-                    post = self.convertForTemplate(post, true);
+                    item = self.convertForTemplate(item, true);
 
-                    if (isreply) {
-                        post.ispost = false;
+                    if (isReply) {
+                        item.ispost = false;
                     }
 
-                    Templates.render(self.TEMPLATE_COMMENT, post).done(function(html) {
+                    Templates.render(self.TEMPLATE_COMMENT, item).done(function(html) {
                         var el = $(html);
-                        targetselector.append(el);
+                        target.append(el);
 
                         if (!self.lastcurrentcount) {
                             // This is the first reply of this discussion.
@@ -788,12 +788,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             self.updateCommentCount(self.lastcurrentcount + 1, self.lasttotal + 1);
                         }
 
-                        if (isreply) {
-                            self.bindReplyEvent(post, el.parent());
-                            self.lastfocuselement = targetselector.find('.studentquiz-comment-btneditreply');
+                        if (isReply) {
+                            self.bindReplyEvent(item, el.parent());
+                            self.lastfocuselement = target.find('.studentquiz-comment-btneditreply');
                         } else {
-                            self.bindCommentEvent(post, el.parent());
-                            self.lastfocuselement = targetselector.find('.studentquiz-comment-btnedit');
+                            self.bindCommentEvent(item);
+                            self.lastfocuselement = target.find('.studentquiz-comment-btnedit');
                         }
 
                         self.loadingicon.hide();
@@ -825,14 +825,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         appendselector.find('form').submit(function(e) {
                             e.preventDefault();
                         });
-                        var highlightel = appendselector.find('#id_setimportant');
-                        if (highlightel.length) {
-                            // Different layout in themes.
-                            highlightel = highlightel.closest('#fitem_id_setimportant, .fitem');
-                        }
-                        if (!self.formhighlightcontent && highlightel.length) {
-                            self.formhighlightcontent = highlightel.prop('outerHTML');
-                        }
                         M.util.js_complete(self.ACTION_LOAD_FRAGMENT_FORM);
                         self.bindFragmentFormEvent(appendselector, item);
                     });
@@ -843,10 +835,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 * */
                 bindFragmentFormEvent: function(containerSelector, item) {
                     var self = this;
-
                     var fragmentsubmitbtn = containerSelector.find('#id_submitbutton');
                     var formselector = containerSelector.find('form');
-
                     fragmentsubmitbtn.click(function() {
                         var formdata = self.convertFormToJson(formselector);
                         // Check message field is required.
@@ -860,18 +850,18 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.createReplyComment(containerSelector, item, formselector, formdata);
                         return true;
                     });
-                    self.fragmentformcancelbutonevent(formselector);
+                    self.fragmentFormCancelEvent(formselector);
                     self.bindEditorEvent(containerSelector);
                 },
 
                 /*
-                * Call web services to create reply, update parent post count, remove the fragment form.
+                * Call web services to create reply, update parent comment count, remove the fragment form.
                 * */
-                createReplyComment: function(containerselector, post, formselector, formdata) {
+                createReplyComment: function(containerselector, item, formselector, formdata) {
                     var self = this;
-                    M.util.js_pending('ipudcreatereply');
+                    M.util.js_pending(self.ACTION_CREATE_REPLY);
                     self.createComment({
-                        replyto: post.id,
+                        replyto: item.id,
                         questionid: self.questionid,
                         cmid: self.cmid,
                         message: {
@@ -879,47 +869,27 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             format: formdata['message[format]'],
                         }
                     }, function(response) {
-                        var postselector = self.elementselector.find('#post' + post.id);
-                        var postrepliesselector = postselector.find('.ipud_post-replies');
+                        var el = self.elementselector.find('#post' + item.id);
+                        var repliesEl = el.find('.ipud_post-replies');
 
                         // There are case when user delete the reply then add reply then the numberofreply property is
-                        // not correct because this post object does not know the child object is deleted, so we update
-                        // post count using DOM.
-                        post.numberofreply++;
+                        // not correct because this comment object does not know the child object is deleted, so we update
+                        // comment count using DOM.
+                        item.numberofreply++;
 
-                        var numreply = parseInt(postselector.find('.studentquiz-comment-count-number').text()) + 1;
+                        var numreply = parseInt(el.find('.studentquiz-comment-count-number').text()) + 1;
 
-                        // Update total post count.
-                        postselector.find('.studentquiz-comment-count-number').text(numreply);
-                        postselector.find('.studentquiz-comment-count-text').html(
+                        // Update total count.
+                        el.find('.studentquiz-comment-count-number').text(numreply);
+                        el.find('.studentquiz-comment-count-text').html(
                             numreply === 1 ? self.langstring.reply : self.langstring.replies
                         );
 
                         containerselector.empty();
                         response.replies = [];
-                        self.appendpost(response, postrepliesselector, true);
-                        M.util.js_complete('ipudcreatereply');
+                        self.appendComment(response, repliesEl, true);
+                        M.util.js_complete(self.ACTION_CREATE_REPLY);
                     });
-                },
-
-                /*
-                * Call web service to update post.
-                * */
-                editpost: function(data, successcb) {
-                    var self = this;
-
-                    ajax.call([{
-                        methodname: 'mod_forumng_edit_post',
-                        args: data,
-                        done: function(response) {
-                            successcb(response);
-                        },
-                        fail: function(response) {
-                            self.showError(response.message);
-                            // Remove the fragment form container.
-                            self.elementselector.find('#post' + data.id + ' .studentquiz-comment-postfragmentform').empty();
-                        }
-                    }]);
                 },
 
                 /*
@@ -938,41 +908,25 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 /*
                 * Bind fragment form cancel button event.
                 * */
-                fragmentformcancelbutonevent: function(formselector, isedit) {
+                fragmentFormCancelEvent: function(formselector) {
                     var self = this;
-                    var cancelbtnselector = formselector.find('#id_cancel');
-                    cancelbtnselector.click(function(e) {
+                    var cancelBtn = formselector.find('#id_cancel');
+                    cancelBtn.click(function(e) {
                         e.preventDefault();
-
-                        var postselector = formselector.closest('.studentquiz-comment-post');
-                        if (isedit) {
-                            self.lastfocuselement = postselector.find('.studentquiz-comment-btnedit');
-                            if (self.lastfocuselement.length === 0) {
-                                self.lastfocuselement = postselector.find('.studentquiz-comment-btneditreply');
-                            }
-                        } else {
-                            self.lastfocuselement = postselector.find('.studentquiz-comment-btnreply');
-                        }
-
+                        var commentSelector = formselector.closest('.studentquiz-comment-post');
+                        self.lastfocuselement = commentSelector.find('.studentquiz-comment-btnreply');
                         self.changeWorkingState(false);
                         formselector.parent().empty();
                     });
                 },
 
                 /*
-                * Bind post delete event.
+                * Bind comment delete event.
                 * */
-                bindpostdeleteevent: function(post) {
+                bindDeleteEvent: function(data) {
                     var self = this;
-                    self.posttodelete = post;
-
+                    self.posttodelete = data;
                     if (self.deleteDialog) {
-                        // Hide button Delete and email if self delete a post.
-                        if (self.posttodelete.authorid === self.userId) {
-                            self.deleteDialog.getFooter().find('button[data-action="yesandemail"]').hide();
-                        } else {
-                            self.deleteDialog.getFooter().find('button[data-action="yesandemail"]').show();
-                        }
                         // Use the rendered modal.
                         self.deleteDialog.show();
                     } else {
@@ -991,13 +945,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             // Save modal for later.
                             self.deleteDialog = modal;
 
-                            // Hide button Delete and email if self delete a post.
-                            if (self.posttodelete.authorid === self.userId) {
-                                modal.getFooter().find('button[data-action="yesandemail"]').hide();
-                            } else {
-                                modal.getFooter().find('button[data-action="yesandemail"]').show();
-                            }
-
                             // Bind event for cancel button.
                             modal.getFooter().find('button[data-action="no"]').click(function(e) {
                                 e.preventDefault();
@@ -1007,13 +954,13 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             // Bind event for delete button.
                             modal.getFooter().find('button[data-action="yes"]').click(function(e) {
                                 e.preventDefault();
-                                M.util.js_pending('ipuddeletepost');
+                                M.util.js_pending(self.ACTION_DELETE);
                                 self.changeWorkingState(true);
                                 // Call web service to delete post.
                                 self.deleteComment(self.posttodelete.id, function(response) {
                                     if (response.success) {
                                         // Delete success, begin to call template and render the page again.
-                                        var postselector = $('#post' + response.postinfo.id);
+                                        var commentSelector = $('#post' + response.postinfo.id);
 
                                         // Add empty array to prevent warning message on console.
                                         response.postinfo.replies = [];
@@ -1032,7 +979,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                                             // Update the parent post count if we delete reply before replace.
                                             if (!convertedpost.ispost) {
-                                                var parentcountselector = postselector.parent().closest('.studentquiz-comment-post')
+                                                var parentcountselector = commentSelector.parent().closest('.studentquiz-comment-post')
                                                     .find('.studentquiz-comment-totalreply');
                                                 var countSelector = parentcountselector.find('.studentquiz-comment-count-number');
                                                 var newcount = parseInt(countSelector.text()) - 1;
@@ -1043,27 +990,16 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                             }
 
                                             // Clone replies and append because the replies will be replaced by template.
-                                            var oldreplies = postselector.find('.ipud_post-replies').clone(true);
-                                            postselector.replaceWith(el);
+                                            var oldreplies = commentSelector.find('.ipud_post-replies').clone(true);
+                                            commentSelector.replaceWith(el);
                                             el.find('.ipud_post-replies').replaceWith(oldreplies);
 
-                                            // Focus on undelete button if exist, otherwise focus on deleted post avatar.
-                                            var btnundelete = el.find('.studentquiz-comment-btnundelete');
-                                            if (btnundelete.length === 0) {
-                                                btnundelete = el.find('.studentquiz-comment-btnundeletereply');
-                                            }
-                                            if (btnundelete.length === 0) {
-                                                self.lastfocuselement = el.find('.studentquiz-comment-pic > a').first();
-                                            } else {
-                                                self.lastfocuselement = btnundelete;
-                                            }
-
-                                            // Update global post count, current count and total count should lose 1.
+                                            // Update global comment count, current count and total count should lose 1.
                                             self.updateCommentCount(self.lastcurrentcount - 1, self.lasttotal - 1);
 
                                             // Bind event to newly append post or reply.
                                             if (self.posttodelete.ispost) {
-                                                self.bindCommentEvent(response.postinfo, el.parent());
+                                                self.bindCommentEvent(response.postinfo);
                                             } else {
                                                 self.bindReplyEvent(response.postinfo, el.parent());
                                             }
@@ -1071,10 +1007,10 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                             // Call this to trigger focus to element.
                                             self.changeWorkingState(false);
 
-                                            M.util.js_complete('ipuddeletepost');
+                                            M.util.js_complete(self.ACTION_DELETE);
                                         });
                                     } else {
-                                        // Unable to delete, show error message
+                                        // Unable to delete, show error message.
                                         self.showError(response.message);
                                     }
                                     modal.hide();
@@ -1083,12 +1019,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                             // Focus back to delete button when user hide modal.
                             modal.getRoot().on(ModalEvents.hidden, function() {
-                                var postselector = $('#post' + self.posttodelete.id);
+                                var el = $('#post' + self.posttodelete.id);
                                 // Focus on different element base on post or reply.
                                 if (self.posttodelete.ispost) {
-                                    postselector.find('.studentquiz-comment-btndelete').first().focus();
+                                    el.find('.studentquiz-comment-btndelete').first().focus();
                                 } else {
-                                    postselector.find('.studentquiz-comment-btndeletereply').first().focus();
+                                    el.find('.studentquiz-comment-btndeletereply').first().focus();
                                 }
                             });
 
@@ -1105,131 +1041,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     }
                 },
 
-                /*
-                * Bind post undelete event.
-                * */
-                bindpostundeleteevent: function(post) {
-                    var self = this;
-
-                    self.posttoundelete = post;
-
-                    if (self.undeleteDialog) {
-                        self.undeleteDialog.show();
-                    } else {
-                        // Disabled button to prevent user from double click on button while loading for template
-                        // for the first time.
-                        self.changeWorkingState(true);
-
-                        ModalFactory.create({
-                            type: ModalFactory.types.DEFAULT,
-                            title: self.langstring.undeletecomment,
-                            body: self.langstring.confirmundelete,
-                            footer: '<button type="button" data-action="yes" title="' +
-                                self.langstring.undeletecomment + '">' + self.langstring.undelete + '</button>' +
-                                '<button type="button" data-action="no" title="' + self.langstring.cancel + '">' +
-                                self.langstring.cancel + '</button>'
-                        }).done(function(modal) {
-                            self.undeleteDialog = modal;
-
-                            // Bind event for cancel button.
-                            modal.getFooter().find('button[data-action="no"]').click(function(e) {
-                                e.preventDefault();
-                                modal.hide();
-                            });
-
-                            // Bind event for undelete button.
-                            modal.getFooter().find('button[data-action="yes"]').click(function(e) {
-                                e.preventDefault();
-                                M.util.js_pending(self.ACTION_UNDELETE);
-                                self.changeWorkingState(true);
-                                // Call web service for undelete comment.
-                                self.undeleteComment(self.posttoundelete.id, function(response) {
-                                    if (response.success) {
-                                        // Undelete post success, begin call template to render post.
-                                        var itemSelector = $('#post' + response.postinfo.id);
-
-                                        // Add empty array to prevent warning message on console.
-                                        response.postinfo.replies = [];
-                                        var convertedpost = self.convertForTemplate(response.postinfo,
-                                            self.posttoundelete.expanded);
-                                        convertedpost.ispost = self.posttoundelete.ispost;
-
-                                        // Reply will always be expanded.
-                                        if (!convertedpost.ispost) {
-                                            convertedpost.expanded = true;
-                                        }
-
-                                        // Call template to render post again.
-                                        Templates.render(self.TEMPLATE_COMMENT, convertedpost).done(function(html) {
-                                            var el = $(html);
-                                            // Update the parent post count if we undelete reply before replace.
-                                            if (!convertedpost.ispost) {
-                                                var parentCountEl = itemSelector.parent().closest('.studentquiz-comment-post')
-                                                    .find('.studentquiz-comment-totalreply');
-                                                var count = parseInt(parentCountEl.find('.studentquiz-comment-count-number').text());
-                                                var newCount = count + 1;
-                                                parentCountEl.find('.studentquiz-comment-count-number').text(newCount);
-                                                parentCountEl.find('.studentquiz-comment-count-text').html(
-                                                    newCount === 1 ? self.langstring.reply : self.langstring.replies
-                                                );
-                                            }
-
-                                            // Clone and backup rendered reply because it will be replaced by template.
-                                            var oldReplies = itemSelector.find('.ipud_post-replies').clone(true);
-                                            itemSelector.replaceWith(el);
-                                            el.find('.ipud_post-replies').replaceWith(oldReplies);
-
-                                            // Focus on delete button.
-                                            var btndelete = el.find('.studentquiz-comment-btndelete');
-                                            if (btndelete.length === 0) {
-                                                btndelete = el.find('.studentquiz-comment-btndeletereply');
-                                            }
-                                            self.lastfocuselement = btndelete;
-
-                                            // Update global comment count current count and total count should have 1 more.
-                                            self.updateCommentCount(self.lastcurrentcount + 1, self.lasttotal + 1);
-
-                                            // Bind event to newly append comment or reply.
-                                            if (self.posttoundelete.ispost) {
-                                                self.bindCommentEvent(response.postinfo, el.parent());
-                                            } else {
-                                                self.bindReplyEvent(response.postinfo, el.parent());
-                                            }
-
-                                            // Call this to trigger focus to element.
-                                            self.changeWorkingState(false);
-
-                                            M.util.js_complete(self.ACTION_UNDELETE);
-                                        });
-                                    } else {
-                                        // Unable to undelete comment, show error dialog.
-                                        self.showError(response.message);
-                                    }
-                                    modal.hide();
-                                });
-                            });
-
-                            // Focus back to delete button when user hide modal.
-                            modal.getRoot().on(ModalEvents.hidden, function() {
-                                var postselector = $('#post' + self.posttoundelete.id);
-                                // Focus on undelete button of current post when user hide the dialog.
-                                if (self.posttoundelete.ispost) {
-                                    postselector.find('.studentquiz-comment-btnundelete').first().focus();
-                                } else {
-                                    postselector.find('.studentquiz-comment-btnundeletereply').first().focus();
-                                }
-                            });
-
-                            // Enable button when modal is shown.
-                            modal.getRoot().on(ModalEvents.shown, function() {
-                                self.changeWorkingState(false);
-                            });
-
-                            // Display the dialogue.
-                            modal.show();
-                        });
-                    }
-                },
 
                 /*
                 * Call web service to delete comment.
@@ -1239,28 +1050,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                     ajax.call([{
                         methodname: self.ACTION_DELETE,
-                        args: {
-                            questionid: self.questionid,
-                            cmid: self.cmid,
-                            commentid: id
-                        },
-                        done: function(data) {
-                            successcb(data);
-                        },
-                        fail: function(data) {
-                            self.showError(data.message);
-                        }
-                    }]);
-                },
-
-                /*
-                * Call web service to undelete comment.
-                * */
-                undeleteComment: function(id, successcb) {
-                    var self = this;
-
-                    ajax.call([{
-                        methodname: self.ACTION_UNDELETE,
                         args: {
                             questionid: self.questionid,
                             cmid: self.cmid,
@@ -1364,7 +1153,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 },
 
                 /*
-                 * Bind event to disable post button when text area content is empty.
+                 * Bind event to disable button when text area content is empty.
                  * */
                 bindEditorEvent: function(formSelector) {
                     var self = this;

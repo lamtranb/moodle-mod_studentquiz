@@ -20,7 +20,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
-use mod_studentquiz\commentarea\question;
+use mod_studentquiz\commentarea\container;
 use mod_studentquiz\utils;
 
 defined('MOODLE_INTERNAL') || die();
@@ -83,7 +83,7 @@ class delete_comment extends external_api {
         ));
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
-        $commentarea = new question($studentquiz, $question, $cm, $context);
+        $commentarea = new container($studentquiz, $question, $cm, $context);
 
         $comment = $commentarea->query_comment_by_id($params['commentid']);
 

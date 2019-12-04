@@ -30,13 +30,9 @@ require_once($CFG->libdir . '/formslib.php');
  */
 class comment_form extends \moodleform {
 
-    const ATTO_TOOLBAR = 'style1 = bold, italic
-        style2 = link, unlink
-        style3 = superscript, subscript
-        style4 = unorderedlist, orderedlist
-        style5 = html';
-
     const SHOW_CANCEL_BUTTON = true;
+
+    const PARENT_VALUE = 0;
 
     private $attributes = ['class' => 'comment-area-form'];
 
@@ -55,36 +51,23 @@ class comment_form extends \moodleform {
 
         $questionid = $params['questionid'];
         $replyto = isset($params['replyto']) && $params['replyto'] ? $params['replyto'] : 0;
-        $cmid = $params['cmid'];
+        $context = \context_module::instance($params['cmid']);
 
-        $text = $replyto == 0 ? 'add_comment' : 'add_reply';
+        $formtype = $replyto == self::PARENT_VALUE ? 'add_comment' : 'add_reply';
+        $submitlabel = \get_string($formtype, 'mod_studentquiz');
 
         $unique = $questionid . '_' . $replyto;
 
-        \MoodleQuickForm::registerElementType('comment_simple_editor', "$CFG->libdir/form/editor.php",
-                comment_simple_editor::class);
+        \MoodleQuickForm::registerElementType('comment_editor', "$CFG->libdir/form/editor.php", comment_simple_editor::class);
 
-        $editorattributes = [
-                'id' => 'id_editor_question_' . $unique,
-                'cols' => 60,
-                'rows' => 10,
-                'class' => 'comment_editor_container'
-        ];
-
-        $editoroptions = [
-                'context' => \context_module::instance($cmid),
-                'atto:toolbar' => self::ATTO_TOOLBAR,
-                'noclean' => VALUE_DEFAULT,
-                'trusttext' => VALUE_DEFAULT
-        ];
         $mform->addElement('html', \html_writer::start_tag('div', array('id' => 'studentquiz_customeditor_' . $unique)));
-        $mform->addElement('comment_simple_editor', 'message', \get_string($text, 'mod_studentquiz'), $editorattributes,
-                $editoroptions);
+        $mform->addElement('comment_editor', 'message', $submitlabel,
+                ['id' => 'id_editor_question_' . $unique],
+                ['context' => $context]
+        );
         $mform->addElement('html', \html_writer::end_tag('div'));
-
         $mform->setType('message', PARAM_RAW);
-
-        $mform->addRule('message', \get_string('required'), 'required', null, 'client');
+        $mform->addRule('message', \get_string('required'), 'required', null);
         $mform->addHelpButton('message', 'comment_help', 'mod_studentquiz');
 
         // Hidden fields.
@@ -96,7 +79,6 @@ class comment_form extends \moodleform {
         $mform->addElement('hidden', 'random', rand());
         $mform->setType('random', PARAM_INT);
 
-        $submitlabel = \get_string($text, 'mod_studentquiz');
         $cancelbutton = isset($this->_customdata['cancelbutton']) ? $this->_customdata['cancelbutton'] : self::SHOW_CANCEL_BUTTON;
 
         $buttonarray[] = &$mform->createElement('submit', 'submitbutton', $submitlabel, ['class' => 'btn-submit']);

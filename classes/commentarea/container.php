@@ -18,24 +18,25 @@ namespace mod_studentquiz\commentarea;
 
 defined('MOODLE_INTERNAL') || die();
 
-use mod_studentquiz\utils;
-
 /**
- * Question class for comment area
+ * Container class for comment area.
  *
  * @package mod
  * @subpackage studentquiz
  * @copyright 2019 The Open University
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class question {
+class container {
 
     /** @var int - Number of comments to show by default. */
     const NUMBER_COMMENT_TO_SHOW_BY_DEFAULT = 5;
 
+    const PARENTID = 0;
+
+    const SHOW_ALL = 0;
+
     const COMMENT_CREATED = 'comment_created';
     const COMMENT_DELETED = 'comment_deleted';
-    const COMMENT_UNDELETED = 'comment_undeleted';
 
     /** @var \question_definition $question - Question class. */
     private $question;
@@ -53,9 +54,7 @@ class question {
     private $studentquiz;
 
     /** @var string - Basic order to get comments. */
-    private $order = '(cmt.parentid IS NOT NULL),
-    case when cmt.parentid is null then cmt.created end asc,
-    case when cmt.parentid is not null then cmt.created end asc';
+    private $order = 'created ASC';
 
     /** @var object|\stdClass - Config of Moodle. Only call it once when __construct */
     private $config;
@@ -65,6 +64,13 @@ class question {
 
     /** @var object|\stdClass - Current course of Moodle. Only call it once when __construct */
     private $course;
+
+    /**
+
+    /**
+     * @var array List of users has comments.
+     */
+    private $userlist = [];
 
     /**
      * mod_studentquiz_commentarea_list constructor.
@@ -159,54 +165,54 @@ class question {
     }
 
     /**
-     * Get first level comments belong to this question.
+     * Fetch all comments.
      *
-     * @param $numbertoshow integer Number of first posts to show, "0" to show all posts.
-     * @return array Array of stdClass contain posts.
+     * @param $numbertoshow
+     * @return array
      */
-    public function get_comments($numbertoshow, $where = '', $whereparams = [], $order = false) {
-        // Get array of comments.
-        $comments = $this->get_built_comments($where, $whereparams, $order);
-        if ($numbertoshow == 0) {
-            return $comments;
+    public function fetch_all($numbertoshow) {
+        // When we get all comments, sort as oldest to newest
+        if ($numbertoshow === self::SHOW_ALL) {
+            $order = $this->order;
+        } else {
+            // When we get limit, get the latest comments.
+            $order = 'created DESC';
         }
-        $res = [];
-        // Get first latest comments.
-        $index = count($comments) - 1;
-        while ($numbertoshow > 0 && $index >= 0) {
-            $res[] = $comments[$index];
-
-            $index--;
-            $numbertoshow--;
-        }
-        return $res;
+        return $this->fetch($numbertoshow, ' AND parentid = ?', [self::PARENTID], $order);
     }
 
     /**
-     * Get built comments.
+     * Fetch comments.
      *
+     * @param $numbertoshow
      * @param $where
      * @param $whereparams
      * @param $order
+     * @param $refresh
      * @return array
      */
-    public function get_built_comments($where, $whereparams, $order) {
-        if (!$this->comments) {
-            $this->comments = $this->query_comments($where, $whereparams, $order);
+    public function fetch($numbertoshow, $where = '', $whereparams = [], $order = false, $refresh = false) {
+        if (!$this->comments || $refresh) {
+            $this->comments = $this->query_comments($where, $whereparams, $order, $numbertoshow);
         }
         $comments = $this->comments;
-        // Obtain comments relationships.
-        $tree = $this->build_tree($comments);
         $list = [];
-        foreach ($tree as $rootid => $children) {
-            $comment = $this->build_comment($comments[$rootid]);
-            if (!empty($children)) {
-                foreach ($children as $childid) {
-                    $reply = $this->build_comment($comments[$childid], $comment);
-                    $comment->add_child($reply);
+        // Check if we have any comments.
+        if ($comments) {
+            // we need to get users
+            $this->set_user_list($comments);
+            // Obtain comments relationships.
+            $tree = $this->build_tree($comments);
+            foreach ($tree as $rootid => $children) {
+                $comment = $this->build_comment($comments[$rootid]);
+                if (!empty($children)) {
+                    foreach ($children as $childid) {
+                        $reply = $this->build_comment($comments[$childid], $comment);
+                        $comment->add_child($reply);
+                    }
                 }
+                $list[] = $comment;
             }
-            $list[] = $comment;
         }
         return $list;
     }
@@ -222,7 +228,7 @@ class question {
         foreach ($comments as $id => $comment) {
             $parentid = $comment->parentid;
             // Add root comments.
-            if (is_null($parentid)) {
+            if ($parentid == self::PARENTID) {
                 if (!isset($tree[$id])) {
                     $tree[$id] = [];
                 }
@@ -242,14 +248,11 @@ class question {
      * @return int
      */
     public function get_num_comments() {
-        $count = 0;
-        $comments = $this->comments;
-        foreach ($comments as $comment) {
-            if ($comment->deleted) {
-                continue;
-            }
-            $count++;
-        }
+        global $DB;
+        $count = $DB->count_records('studentquiz_comment', [
+                'questionid' => $this->get_question()->id,
+                'deleted' => 0
+        ]);
         return $count;
     }
 
@@ -261,29 +264,40 @@ class question {
      * @param bool $order - Order.
      * @return array - Array of comment.
      */
-    public function query_comments($where = '', $whereparams = [], $order = false) {
+    public function query_comments($where = '', $whereparams = [], $order = false, $limit = false) {
         global $DB;
-        $basicwhere = 'cmt.questionid = ?';
+        $basicwhere = 'questionid = ?';
         $where = !$where ? $basicwhere : $basicwhere . ' ' . $where;
         $whereparams = array_merge([$this->question->id], $whereparams);
+        // Set order.
         if ($order === false) {
             $order = $this->order;
         }
+        // Set limit.
+        if (!$limit || !is_numeric($limit) || $limit == self::SHOW_ALL) {
+            $limit = '';
+        } else {
+            $limit = 'LIMIT ' . $limit;
+        }
         $query = "
-            SELECT cmt.*, ROW_NUMBER() OVER() AS rownumber,
-            " . utils::select_username_fields('u', true) . ",
-            " . utils::select_username_fields('eu') . ",
-            " . utils::select_username_fields('du') . "
-            FROM
-                {studentquiz_comment} cmt
-                INNER JOIN {user} u ON cmt.userid = u.id
-                LEFT JOIN {user} eu ON cmt.edituserid = eu.id
-                LEFT JOIN {user} du ON cmt.deleteuserid = du.id
+        WITH
+        root AS
+        (
+            SELECT * 
+            FROM {studentquiz_comment} 
             WHERE
                 $where
-            ORDER BY
-                $order
-        ";
+            ORDER BY 
+                $order 
+            $limit
+        )
+        (SELECT *, ROW_NUMBER() OVER(ORDER BY created) AS rownumber FROM root)
+        UNION
+        (SELECT child.*, ROW_NUMBER() OVER(ORDER BY created) + (SELECT COUNT(*) FROM root) AS rownumber 
+            FROM {studentquiz_comment} AS child 
+            WHERE child.parentid IN (SELECT id FROM root))
+        ORDER BY
+            rownumber ASC";
         // Retrieve comments from question.
         $results = $DB->get_records_sql($query, $whereparams);
         return $results;
@@ -296,26 +310,30 @@ class question {
      * @return comment
      */
     public function query_comment_by_id($id) {
-        $where = 'AND (cmt.id = ? OR cmt.parentid = ?)';
-        $whereparams = [$id, $id];
-        // Retrieve comments from question.
-        $comments = $this->query_comments($where, $whereparams);
-        if (!$comments) {
+        global $DB;
+
+        $query = "SELECT * from {studentquiz_comment} WHERE id = ?";
+        // First fetch to check it's a comment or reply.
+        $record = $DB->get_record_sql($query, [$id]);
+
+        if (!$record) {
             throw new \moodle_exception('cannotgetcomment', 'mod_studenquiz');
         }
-        // Get current comment.
-        $comment = $this->build_comment($comments[$id]);
-        $tree = $this->build_tree($comments);
-        // This comment is base comment, we need to get its replies.
-        if (isset($tree[$id])) {
-            $children = $tree[$id];
-            if (!empty($children)) {
-                foreach ($children as $childid) {
-                    $comment->add_child($this->build_comment($comments[$childid], $comment));
-                }
-            }
+
+        // It is a reply.
+        if ($record->parentid != self::PARENTID) {
+            $parentdata = $DB->get_record_sql($query, [$record->parentid]);
+            $this->set_user_list([$record]);
+            $comment = $this->build_comment($record, $parentdata);
+            return $comment;
         }
-        return $comment;
+
+        // It's a comment.
+        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id], false, true);
+        if (!isset($comments[0])) {
+            throw new \moodle_exception('cannotgetcomment', 'mod_studenquiz');
+        }
+        return $comments[0];
     }
 
     /**
@@ -343,7 +361,7 @@ class question {
         $comment->comment = $data->message['text'];
         $comment->questionid = $this->question->id;
         $comment->userid = $this->get_user()->id;
-        $comment->parentid = $data->replyto != 0 ? $data->replyto : null;
+        $comment->parentid = $data->replyto != self::PARENTID ? $data->replyto : self::PARENTID;
         $comment->created = time();
         $id = $DB->insert_record('studentquiz_comment', $comment);
         if ($log) {
@@ -366,5 +384,49 @@ class question {
         } else if ($action == self::COMMENT_DELETED) {
             mod_studentquiz_notify_comment_deleted($data, $this->get_course(), $cm);
         }
+    }
+
+    /**
+     * Set users list.
+     *
+     * @param array $comments
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    public function set_user_list($comments) {
+        global $DB;
+        $userids = [];
+        foreach ($comments as $comment) {
+            if (!in_array($comment->userid, $userids)) {
+                $userids[] = $comment->userid;
+            }
+            if (!in_array($comment->deleteuserid, $userids)) {
+                $userids[] = $comment->deleteuserid;
+            }
+        }
+        // Retrieve users from db.
+        list($idsql, $params) = $DB->get_in_or_equal($userids);
+        $fields = get_all_user_name_fields(true);
+        $query = "SELECT id, $fields
+                FROM {user}
+                WHERE id $idsql";
+        $users = $DB->get_records_sql($query, $params);
+        foreach ($users as $user) {
+            $user->fullname = fullname($user);
+            $this->userlist[$user->id] = $user;
+        }
+    }
+
+    /**
+     * Get user from users list.
+     *
+     * @param $id
+     * @return mixed|null
+     */
+    public function get_user_from_user_list($id) {
+        if (is_null($id) || !isset($this->userlist[$id])) {
+            return null;
+        }
+        return $this->userlist[$id];
     }
 }

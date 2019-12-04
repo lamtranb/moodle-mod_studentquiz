@@ -41,10 +41,15 @@
                 <button class="studentquiz-comment-collapse" title="{{#str}} collapseall, mod_studentquiz {{/str}}">
                     {{#str}} collapseall, mod_studentquiz {{/str}}
                 </button>
-                <span class="studentquiz-comment-postcount"></span>
+                <span class="studentquiz-comment-postcount">
+                    {{#postcount}}{{postcount}}{{/postcount}}
+                </span>
             </div>
         </div>
     </div>
-    <div class="studentquiz-comment-replies"></div>
+    <div class="studentquiz-comment-replies">{{>mod_studentquiz/comments}}</div>
+    <span class="no-comment">
+        {{^comments}}{{#str}} no_comments, mod_studentquiz {{/str}}{{/comments}}
+    </span>
     <span class="studentquiz-comment-loading" style="display: none">{{#pix}} y/loading, core, {{#str}} loading {{/str}} {{/pix}}</span>
 </div>
