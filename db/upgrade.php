@@ -387,14 +387,14 @@ function xmldb_studentquiz_upgrade($oldversion) {
     }
 
     if ($oldversion < 2018051300) {
-        // Fix wrong parent in question categories if applicable
+        // Fix wrong parent in question categories if applicable.
         mod_studentquiz_fix_wrong_parent_in_question_categories();
 
         upgrade_mod_savepoint(true, 2018051300, 'studentquiz');
     }
 
     if ($oldversion < 2018121101) {
-        // Repair table studentquiz_progress
+        // Repair table studentquiz_progress.
         $table = new xmldb_table('studentquiz_progress');
 
         // Adding fields to table studentquiz_progress.
@@ -431,7 +431,7 @@ function xmldb_studentquiz_upgrade($oldversion) {
     }
 
     if ($oldversion < 2018121102) {
-        // Repair table studentquiz_progress
+        // Repair table studentquiz_progress.
 
         $table = new xmldb_table('studentquiz');
         $field = new xmldb_field('aggregated', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
@@ -545,6 +545,45 @@ function xmldb_studentquiz_upgrade($oldversion) {
         mod_studentquiz_migrate_all_studentquiz_instances_to_aggregated_state();
 
         upgrade_mod_savepoint(true, 2019071700, 'studentquiz');
+    }
+
+    if ($oldversion < 2019110500) {
+
+        $table = new xmldb_table('studentquiz_comment');
+        $field = new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'comment');
+        $index = new xmldb_index('parentidindex', XMLDB_INDEX_NOTUNIQUE, array('parentid'));
+        if (!$dbman->field_exists($table, $field)) {
+            // Add parentid field.
+            $dbman->add_field($table, $field);
+
+            // Add index to parentid field.
+            if (!$dbman->index_exists($table, $index)) {
+                $dbman->add_index($table, $index);
+            }
+        }
+
+        // Add modified.
+        $field = new xmldb_field('modified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0, 'created');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('deleted', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0, 'modified');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('edituserid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('deleteuserid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2019110500, 'studentquiz');
     }
 
     return true;

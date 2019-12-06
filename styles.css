@@ -220,9 +220,9 @@
     width: 100%;
 }
 
-.path-mod-studentquiz .studentquiz_behaviour .comment_list > div {
+.path-mod-studentquiz .studentquiz_behaviour .comment_list > div.studentquiz-comment-container {
     border-bottom: 1px solid #fff;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #bfe2ef;
     padding: 15px 0;
     position: relative;
 }
@@ -311,4 +311,614 @@
 .path-mod-studentquiz .mod_studentquiz_submission_info {
     margin-top: 10px;
     margin-bottom: 10px;
+}
+
+/** Student quiz comment */
+.studentquiz-comment-container {
+    padding-top: 8px;
+    padding-left: 10px;
+    padding-right: 12px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-activity-icon {
+    float: left;
+    width: 36px;
+    display: inline-block;
+    padding-top: 5px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-unavailable {
+    margin: 10px 0;
+    border: 1px dotted #888;
+    background: #f8f8f8;
+    padding: 10px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-activity-icon > img.icon {
+    width: 32px;
+    height: 32px;
+}
+/* Atto in ie need the scroll and max height. */
+.ie .studentquiz-comment-container .editor_atto_content {
+    max-height: 148px;
+    overflow-y: scroll;
+}
+
+.studentquiz-comment-container .studentquiz-comment-discussion-content {
+    display: block;
+    margin-left: 39px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-subject {
+    font-size: 1.14285em;
+    color: #000;
+    font-weight: bold;
+    padding-top: 10px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-introduction {
+    display: inline-block;
+    color: #000;
+    padding-top: 2px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-discussion-info {
+    margin-top: 10px;
+    text-align: right;
+}
+
+.studentquiz-comment-container .studentquiz-comment-discussion-info .studentquiz-comment-expand-section {
+    display: inline-block;
+}
+
+.studentquiz-comment-container .studentquiz-comment-discussion-info .studentquiz-comment-postcount {
+    font-weight: 700;
+}
+
+.studentquiz-comment-container .studentquiz-comment-groupselector {
+    display: inline;
+    float: left;
+    text-align: left;
+    margin-right: 6px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform {
+    margin-top: 15px;
+    clear:both;
+}
+
+.studentquiz-comment-container .editor_atto_content {
+    resize: vertical;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform input.disabled,
+.studentquiz-comment-container .studentquiz-comment-postfragmentform input.disabled {
+    cursor: default;
+    background: #f0f0f1;
+    color: #676463;
+    border-color: #d4d2d2;
+    opacity: 1.0;
+    pointer-events: none;
+    font-weight: normal;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .editor_atto_toolbar {
+    display: none;
+    border-bottom: none;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .editor_atto_content_wrap {
+    border: none;
+    position: relative;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .editor_atto_content_wrap:before {
+    content: attr(data-placeholder);
+    color: gray;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    pointer-events: none;
+}
+
+.studentquiz-comment-container #forumg_customeditor .editor_atto_notification,
+.studentquiz-comment-container .studentquiz-comment-postform .editor_atto_notification {
+    position: relative;
+    bottom: 0;
+    height: auto;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .editor_atto_content {
+    border: 1px solid #bbb;
+}
+
+.studentquiz-comment-container .mform .fitem textarea[cols] {
+    max-width: none;
+    width: 100% !important; /* Override inline styling by Javascript. */
+    min-height: 48px; /* Similar to editor container.  */
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .mform .fitem textarea[cols] {
+    border-top: 1px solid #bbb;
+    padding: 4px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-expand,
+.studentquiz-comment-container .studentquiz-comment-collapse {
+    color: #fff;
+    padding: 5px 36px 5px 10px;
+    border-radius: 3px 3px 0 0;
+    border: none;
+    background-color: #0b55a8;
+    font-size: 1em;
+    display: none;
+    margin: 11px 0 0 0;
+    height: 30px;
+    position: relative;
+    background-image: none;
+}
+
+.studentquiz-comment-container .studentquiz-comment-expand::after {
+    content: url([[pix:mod_studentquiz|switch_plus_white]]);
+    position: absolute;
+    right: 10px;
+    top: 7px;
+    width: 16px;
+    display: block;
+}
+
+.studentquiz-comment-container .studentquiz-comment-collapse::after {
+    content: url([[pix:mod_studentquiz|switch_minus_white]]);
+    position: absolute;
+    right: 10px;
+    top: 7px;
+    width: 16px;
+    display: block;
+}
+
+.studentquiz-comment-container .studentquiz-comment-expand:hover,
+.studentquiz-comment-container .studentquiz-comment-expand:active,
+.studentquiz-comment-container .studentquiz-comment-expand:focus,
+.studentquiz-comment-container .studentquiz-comment-collapse:hover,
+.studentquiz-comment-container .studentquiz-comment-collapse:active,
+.studentquiz-comment-container .studentquiz-comment-collapse:focus {
+    background-color: #002158;
+    color: #fff;
+    cursor: pointer;
+}
+
+.studentquiz-comment-container .studentquiz-comment-expand[disabled],
+.studentquiz-comment-container .studentquiz-comment-expand[disabled]:hover,
+.studentquiz-comment-container .studentquiz-comment-collapse[disabled],
+.studentquiz-comment-container .studentquiz-comment-collapse[disabled]:hover {
+    background: #f0f0f1;
+    color: #676463;
+    border-color: #d4d2d2;
+    opacity: 1.0;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postcount {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 1.14285em;
+    vertical-align: middle;
+    margin: 15px 0 0 15px;
+    float: right;
+}
+
+/* Hide the form message label and require message. */
+.studentquiz-comment-container .studentquiz-comment-postform .fdescription.required,
+.studentquiz-comment-container .studentquiz-comment-postform #forumg_customeditor .fitemtitle,
+.studentquiz-comment-container .studentquiz-comment-postfragmentform .fdescription.required,
+.studentquiz-comment-container .studentquiz-comment-postfragmentform #forumg_customeditor .fitemtitle {
+    display: none !important;
+}
+.studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 14px;
+}
+.studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .fitemtitle,
+.studentquiz-comment-container #forumg_customeditor #fitem_id_setimportant .fitemtitle {
+    display: block !important;
+    width: 20%;
+    float: left;
+    margin-right: 0;
+}
+.studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .felement {
+    float: none;
+    margin-top: 3px;
+}
+.studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .felement > select {
+    margin-bottom: 0;
+}
+
+/*Move the form post button up. */
+.studentquiz-comment-container .studentquiz-comment-postform .fitem_actionbuttons,
+.studentquiz-comment-container .studentquiz-comment-postfragmentform .fitem_actionbuttons {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postform .felement,
+.studentquiz-comment-container .studentquiz-comment-postfragmentform .felement {
+    margin-left: 0 !important;
+}
+
+/* Tablet Landscape. */
+.studentquiz-comment-container .forumng-post {
+    margin-top: 12px;
+}
+
+.studentquiz-comment-container .forumng-commands-buttons {
+    float: left;
+}
+
+/* Style the post element. */
+.studentquiz-comment-container .studentquiz-comment-post {
+    padding-top: 12px;
+    border-top: 1px solid #bfe2ef;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post.studentquiz-comment-post-important {
+    border: 2px solid #0B55A8;
+    padding: 5px;
+}
+.studentquiz-comment-container .studentquiz-comment-post.studentquiz-comment-post-important .studentquiz-comment-highlighted {
+    position: relative;
+    top: -5px;
+    left: -5px;
+    margin-bottom: 5px;
+}
+.studentquiz-comment-container .studentquiz-comment-post.studentquiz-comment-post-important .studentquiz-comment-highlighted > span {
+    background-color: #0B55A8;
+    color: white;
+    padding: 4px 6px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-pic-info {
+    float: left;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post .studentquiz-comment-pic,
+.studentquiz-comment-container .studentquiz-comment-post .studentquiz-comment-pic img {
+    width: 42px;
+    height: 42px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post-outerbox {
+    margin-left: 54px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-author {
+    line-height: 1;
+    color: #000000;
+    font-size: 1em;
+    padding-right: 20px;
+    position: relative;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-expandlink,
+.studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-collapselink {
+    position: absolute;
+    top: 3px;
+    right: 0;
+    margin-top: -3px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-expandlink img.icon,
+.studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-collapselink img.icon,
+.studentquiz-comment-container .studentquiz-comment-delete-message .studentquiz-comment-expandlink img.icon,
+.studentquiz-comment-container .studentquiz-comment-delete-message .studentquiz-comment-collapselink img.icon {
+    padding-right: 0;
+}
+
+.studentquiz-comment-container .studentquiz-comment-text,
+.studentquiz-comment-container .studentquiz-comment-text-deleted {
+    background-color: #f4fafc;
+    min-height: 70px;
+    margin-right: 26px;
+    font-size: 1em;
+    color: #000;
+    padding: 2px 8px 2px 8px;
+    margin-top: 10px;
+    overflow: auto;
+}
+
+.studentquiz-comment-container .studentquiz-comment-text-deleted {
+    color: #a5a5a5;
+    background-color: #fff;
+}
+
+.studentquiz-comment-container .studentquiz-comment-text-deleted .studentquiz-comment-delete-info {
+    color: #000;
+}
+
+.studentquiz-comment-container .ipud_post-replies .studentquiz-comment-postfooter {
+    text-align: left;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfooter {
+    margin: 12px 0 16px 54px;
+    text-align: right;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-commands-buttons {
+    display: inline-block;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-commands-buttons button {
+    margin-right: 9px;
+    line-height: 1;
+    height: 28px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-commands-buttons .studentquiz-comment-btnedit img,
+.studentquiz-comment-container .studentquiz-comment-commands-buttons .studentquiz-comment-btneditreply img {
+    width: 20px;
+    height: 20px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-commands-buttons .studentquiz-comment-btnedit.disabled,
+.studentquiz-comment-container .studentquiz-comment-commands-buttons .studentquiz-comment-btneditreply.disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-totalreply {
+    display: inline-block;
+    float: right;
+    margin-top: 3px;
+    font-size: 1em;
+    color: #000;
+}
+
+.studentquiz-comment-container .ipud_post-replies {
+    padding-left: 27px;
+    position: relative;
+}
+
+.studentquiz-comment-container .ipud_post-replies .studentquiz-comment-replyicon {
+    position: absolute;
+    transform: rotate(180deg);
+    left: 0;
+}
+
+.studentquiz-comment-container .ipud_post-replies .studentquiz-comment-replyicon > img {
+    padding-right: 0;
+}
+
+.studentquiz-comment-container .studentquiz-comment-loading {
+    display: block;
+    text-align: center;
+    margin-top: 60px;
+    margin-bottom: 60px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-delete-message {
+    margin: 20px 0 20px 54px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-delete-message {
+    margin: 20px 0 31px 54px;
+    padding-right: 25px;
+    position: relative;
+}
+
+.studentquiz-comment-container .studentquiz-comment-delete-message .studentquiz-comment-expandlink,
+.studentquiz-comment-container .studentquiz-comment-delete-message .studentquiz-comment-collapselink {
+    position: absolute;
+    right: 0;
+    height: 16px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-mod-label {
+    font-weight: bold;
+}
+
+.studentquiz-comment-container .studentquiz-comment-anon-message {
+    margin-top: 10px;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfragmentform form #fgroup_id_buttonar {
+    padding-bottom: 0;
+}
+
+.studentquiz-comment-show-dates {
+    border: #9E9E9E 2px solid;
+    margin-bottom: 12px;
+    margin-top : 6px;
+    padding-left: 10px;
+    height: 29px;
+    padding-top: 5px;
+}
+
+.studentquiz-comment-show-post-anon {
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: -9px;
+}
+
+.studentquiz-comment-show-dates + .studentquiz-comment-show-post-anon {
+    margin-top: 13px;
+}
+
+/* Hide error message since the submit button will be disabled when content is empty. */
+.studentquiz-comment-container .editor_atto_wrap.error span.error,
+.studentquiz-comment-container .editor_atto_wrap.error br.error {
+    display: none;
+}
+
+.studentquiz-comment-container .comment-area-form .form-group {
+    margin-left: 0 !important;
+}
+
+/*
+    Hide all label
+ */
+.studentquiz-comment-container .comment-area-form .form-group:not(.comment_editor_container) > div:first-child,
+.studentquiz-comment-container .studentquiz-comment-postform div[data-groupname="buttonar"] > div:first-child {
+    display: none;
+}
+
+.studentquiz-comment-container .comment-area-form label:first-child {
+    margin: 0 !important;
+}
+
+.studentquiz-comment-container .comment_editor_container .felement {
+    width: 100%;
+    flex: unset;
+    max-width: 100%;
+    display: block;
+}
+
+.studentquiz-comment-container .studentquiz-comment-postfragmentform {
+    padding-right: 27px;
+    position: relative;
+    margin-left: 54px;
+    padding-left: 27px;
+}
+
+/* Tablet. */
+@media (max-width: 1024px) {
+    .studentquiz-comment-container {
+        padding-right: 14px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postcount,
+    .studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-totalreply {
+        margin-right: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-text,
+    .studentquiz-comment-container .studentquiz-comment-text-deleted {
+        padding-right: 0;
+        margin-right: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postfooter {
+        margin-bottom: 15px;
+    }
+}
+
+/* Tablet Portrait. */
+@media (max-width: 1023px) {
+    .studentquiz-comment-container {
+        padding-right: 10px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-discussion-info {
+        text-align: left;
+        position: relative;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-groupselector {
+        display: block;
+        float: none;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-discussion-info .studentquiz-comment-postcount {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        margin-right: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-author {
+        margin-left: 54px;
+        position: relative;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postdate {
+        display: block;
+        margin-top: 6px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-expandlink,
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-collapselink {
+        position: absolute;
+        right: 0;
+        top: 14px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox {
+        margin-left: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-text,
+    .studentquiz-comment-container .studentquiz-comment-text-deleted {
+        margin-top: 16px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postfooter {
+        margin-left: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postcount,
+    .studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-totalreply {
+        margin-right: 7px;
+    }
+}
+
+/* Mobile. */
+@media (max-width: 767px) {
+    .studentquiz-comment-container {
+        padding-right: 7px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-text,
+    .studentquiz-comment-container .studentquiz-comment-text-deleted {
+        min-height: 72px;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postcount,
+    .studentquiz-comment-container .studentquiz-comment-postfooter,
+    .studentquiz-comment-commands-box .studentquiz-comment-totalreply {
+        margin-right: 7px;
+    }
+
+    .studentquiz-comment-container .ipud_post-replies .studentquiz-comment-replyicon {
+        left: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-postform #fgroup_id_buttonar,
+    .studentquiz-comment-container .studentquiz-comment-postfragmentform #fgroup_id_buttonar {
+        padding-left: 0;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-expandlink,
+    .studentquiz-comment-container .studentquiz-comment-post-outerbox .studentquiz-comment-collapselink {
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .fitemtitle {
+        width: auto;
+    }
+    .studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .felement {
+        margin-top: 0;
+    }
+    .studentquiz-comment-container #forumg_customeditor #fitem_id_asmoderator .felement > select {
+        width: 220px;
+    }
+}
+
+/* Very small screen. */
+@media (max-width: 319px) {
+    .studentquiz-comment-container .studentquiz-comment-postcount,
+    .studentquiz-comment-container .studentquiz-comment-postfooter .studentquiz-comment-commands-box .studentquiz-comment-totalreply {
+        float: none;
+    }
+
+    .studentquiz-comment-container .studentquiz-comment-discussion-info .studentquiz-comment-postcount {
+        float: none;
+        position: relative;
+        margin-left: 0;
+    }
 }

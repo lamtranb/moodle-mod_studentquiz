@@ -409,3 +409,48 @@ $string['studentquizname_help'] = 'The name of this StudentQuiz Activity';
 $string['submissionendbeforestart'] = 'Submissions deadline can not be specified before the open for submissions date';
 $string['tags'] = 'Tags';
 $string['unapprove'] = 'Unapprove';
+
+
+$string['expandall'] = 'Expand all comments';
+$string['collapseall'] = 'Collapse all comments';
+$string['expandcomment'] = 'Expand comment';
+$string['collapsecomment'] = 'Collapse comment';
+$string['reportcomment'] = 'Report';
+$string['replycomment'] = 'Reply';
+
+$string['delete'] = 'Delete';
+$string['undelete'] = 'Undelete';
+$string['deletecomment'] = 'Delete comment';
+$string['undeletecomment'] = 'Undelete comment';
+
+$string['reply'] = 'Reply';
+$string['replies'] = 'Replies';
+$string['numberreply'] = '{$a} Replies';
+$string['editorplaceholder'] = 'Enter your response here ...';
+$string['deleteandemail'] = 'Delete and email';
+$string['important_ipud'] = 'Highlighted comment';
+$string['deletedbyauthor'] = 'This comment was deleted by the author on {$a}.';
+$string['deletedbymoderator'] = 'This comment was deleted by a moderator on {$a}.';
+$string['deletedbyuser'] = 'This comment was deleted by {$a->user} on {$a->date}.';
+$string['deletedcomment'] = 'Deleted comment.';
+$string['moderator'] = 'Moderator';
+
+$string['createdbymoderator'] = 'This is a comment created by moderator {$a} with their name hidden from students.';
+
+$string['cannotcreatereply'] = 'Cannot create comment';
+$string['cannotgetcomment'] = 'Cannot get comment';
+$string['error_form_validation'] = '{$a}';
+$string['image_placeholder'] = ' [Image] ';
+$string['missingparam'] = 'A required parameter is missing or wrong';
+$string['confirmdeletecomment'] = 'Are you sure you want to delete this comment?';
+$string['confirmundeletecomment'] = 'Are you sure you want to undelete this comment?';
+$string['onlyrootcommentcanreply'] = 'Only first level of comment can be reply';
+
+$string['describe_already_deleted'] = 'This comment is already deleted.';
+$string['describe_not_deleted'] = 'This comment is not deleted.';
+$string['describe_out_of_time_edit'] = 'This comment is out of time to edit';
+$string['describe_not_creator'] = 'This is not your comment.';
+
+$string['message'] = 'Message';
+$string['add_comment'] = 'Add comment';
+$string['add_reply'] = 'Add reply';
