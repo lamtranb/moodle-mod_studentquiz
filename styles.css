@@ -564,6 +564,10 @@
     background: #def2f8;
 }
 
+.studentquiz-comment-container .studentquiz-comment-post.highlight .ipud_post-replies {
+    background: #ffffff;
+}
+
 .studentquiz-comment-container .studentquiz-comment-post.studentquiz-comment-post-important {
     border: 2px solid #0B55A8;
     padding: 5px;

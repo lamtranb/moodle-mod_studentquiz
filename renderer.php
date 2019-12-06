@@ -345,13 +345,8 @@ class mod_studentquiz_renderer extends plugin_renderer_base {
             $output .= html_writer::empty_tag('br');
             $output .= html_writer::tag('span', $date, ['class' => 'date']);
         } else {
-            $author = core_user::get_user($question->createdby);
-            if ($author) {
-                $output .= html_writer::tag('span', fullname($author));
-            } else {
-                // Cannot find the user. Leave it blank.
-                $output .= html_writer::tag('span', '');
-            }
+            $author = user_get_users_by_id(array($question->createdby))[$question->createdby];
+            $output .= fullname($author);
             $output .= html_writer::empty_tag('br');
             $output .= html_writer::tag('span', $date, ['class' => 'date']);
         }
@@ -368,23 +363,16 @@ class mod_studentquiz_renderer extends plugin_renderer_base {
      * @return string
      */
     public function render_state_column($question, $baseurl, $rowclasses) {
-        // Moodle doesn't process "empty" objects in restore. So questions from older backups can have no question state
-        // assigned. Need to figure out for the calculation, if it's fine to handle them just as new or if the question
-        // table has to have an entry. Ref: https://github.com/frankkoch/moodle-mod_studentquiz/issues/172
-        if (is_null($question->state) || $question->state === "") {
-            $question->state = studentquiz_helper::STATE_NEW;
-        }
-
-        if (!in_array(intval($question->state), array(
+        if (!in_array($question->state, array(
             studentquiz_helper::STATE_DISAPPROVED,
             studentquiz_helper::STATE_APPROVED,
             studentquiz_helper::STATE_NEW,
             studentquiz_helper::STATE_CHANGED,
         ))) {
-            throw new coding_exception('Invalid question state `'.$question->state.'` for question `'.$question->id.'`');
+            throw new coding_exception('Invalid question state');
         }
 
-        $statename = studentquiz_helper::$statename[intval($question->state)];
+        $statename = studentquiz_helper::$statename[$question->state];
         $title = get_string('state_change_tooltip_'.$statename, 'studentquiz');
         $content = $this->output->pix_icon('state_'.$statename, '', 'studentquiz');
 
@@ -1484,12 +1472,12 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
      * @return string HTML fragment
      * @throws coding_exception
      */
-	public function render_comment($cmid, $questionid, $userid) {
+    public function render_comment($cmid, $questionid, $userid, $referer = '', $highlight = 0) {
         $renderer = $this->page->get_renderer('mod_studentquiz', 'comment');
         return html_writer::div(
                 html_writer::div(
                         html_writer::div(
-                                $renderer->render_comment_area($questionid, $userid, $cmid),
+                                $renderer->render_comment_area($questionid, $userid, $cmid, $referer, $highlight),
                                 'comment_list'),
                         'comments'
                 ),
@@ -1830,9 +1818,11 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
      * @param int $questionid, question id
      * @param int $userid, viewing user id
      * @param int $cmid, course module id
+     * @param string $referer - Referer url.
+     * @param int $highlight - Highlight specific comment.
      * @return string HTML fragment
      */
-    public function render_comment_area($questionid, $userid, $cmid) {
+    public function render_comment_area($questionid, $userid, $cmid, $referer = '', $highlight = 0) {
         global $COURSE;
 
         $data = [
@@ -1841,13 +1831,36 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($questionid, $cmid);
         $commentarea = new container($studentquiz, $question, $cm, $context);
-        $comments = $commentarea->fetch_all($commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT);
+        $numbertoshow = $commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT;
+
+        if ($highlight != 0) {
+            $numbertoshow = 0;
+        }
+        $comments = $commentarea->fetch_all($numbertoshow);
         $res = [];
         if (count($comments) > 0) {
             foreach ($comments as $key => $comment) {
                 /** @var comment $comment */
                 $item = $comment->convert_to_object();
                 $item->replies = [];
+                if ($numbertoshow == 0) {
+                    $repliesstring = [];
+                    /** @var comment $reply */
+                    foreach ($comment->get_replies() as $reply) {
+                        $replyobject = $reply->convert_to_object();
+                        $repliesstring[] = [
+                                'id'  => $replyobject->id,
+                                'deleted' => $replyobject->deleted,
+                                'expand' =>  true,
+                                'replies' => [],
+                                'ispost' => false,
+                                'authorid' => $replyobject->authorid
+                        ];
+                        $item->replies[] = $replyobject;
+                        $item->repliesstring = json_encode($repliesstring);
+                    }
+
+                }
                 $res[] = $item;
             }
         }
@@ -1859,7 +1872,10 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'contextid' => $context->id,
                 'userid' => $userid,
                 'numbertoshow' => container::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT,
-                'cmid' => $cmid
+                'cmid' => $cmid,
+                'referer' => $referer,
+                'highlight' => $highlight,
+                'expand' => $numbertoshow === 0
         ];
         $mform = new \mod_studentquiz\commentarea\comment_form(null, [
                 'params' => [
@@ -1867,6 +1883,7 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                         'replyto' => VALUE_DEFAULT,
                         'questionid' => $questionid,
                         'cmid' => $cmid,
+                        'referer' => $referer
                 ],
                 'cancelbutton' => false
         ]);

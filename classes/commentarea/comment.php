@@ -225,6 +225,15 @@ class comment {
      * @return bool
      */
     public function can_report() {
+        if ($this->is_deleted()) {
+            $this->describe = get_string('describe_already_deleted', 'mod_studentquiz');
+            return false;
+        }
+        // If set report emails and comment is not deleted yet.
+        if (empty($this->get_container()->get_reporting_emails())) {
+            $this->describe = get_string('report_comment_not_available', 'mod_studentquiz');
+            return false;
+        }
         return true;
     }
 

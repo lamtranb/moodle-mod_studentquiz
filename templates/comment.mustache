@@ -26,7 +26,9 @@
     * none
 }}
 <div class="studentquiz-comment-post {{#iscreator}}fromcreator{{/iscreator}}" id="post{{id}}" data-id="{{id}}">
-    <span id="c{{id}}" data-deleted="{{ deleted }}" data-numberofreply="{{numberofreply}}" data-authorid="{{authorid}}"></span>
+    <span id="c{{id}}" data-deleted="{{ deleted }}" data-numberofreply="{{numberofreply}}" data-authorid="{{authorid}}"
+          {{#ispost}}data-replies="{{repliesstring}}"{{/ispost}}
+    ></span>
     {{#deleted}}
         {{#canviewdeleted}}
             <div class="studentquiz-comment-post-outerbox">
