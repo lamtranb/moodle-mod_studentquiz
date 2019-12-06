@@ -67,6 +67,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 noCommentSelector: null,
                 lastcurrentcount: 0,
                 lasttotal:0,
+                referer: null,
+                highlight: 0,
 
                 /*
                  * Init function.
@@ -96,7 +98,14 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         total: params.total
                     };
                     self.noCommentSelector = self.elementselector.find('.no-comment');
+                    self.referer = params.referer;
                     self.expand = params.expand;
+
+                    // Highlight.
+                    var query = window.location.search.substring(1);
+                    var getParams = self.parseQueryString(query);
+                    self.highlight = parseInt(getParams.highlight) || 0;
+                    // End get highlight
 
                     // Get all language string in one go.
                     str.get_strings([
@@ -134,7 +143,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         var attrs = $(this).find("#c" + id);
                         var replies = [];
                         if (self.expand) {
-                            replies = attrs.data('replies') || [];
+                           replies = attrs.data('replies') || [];
                         }
                         var comment = {
                             id: id,
@@ -170,6 +179,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     self.changeWorkingState(false);
 
                     self.initBindEditor();
+
+                    if (self.highlight !== 0) {
+                        var highlight = $('#post' + self.highlight);
+                        highlight.addClass('highlight');
+                        self.scrollToElement(highlight);
+                    }
                 },
 
                 /*
@@ -305,17 +320,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             response.replies = [];
                             // Disable post reply button since content is now empty.
                             self.formselector.find('#id_submitbutton').addClass('disabled');
-                            if (response.important) {
-                                // Hide the important field as just made an important post.
-                                var highlightel = self.formselector.find('#id_setimportant');
-                                if (highlightel.length) {
-                                    // Different theme form layouts.
-                                    highlightel = highlightel.closest('#fitem_id_setimportant, .fitem');
-                                    if (highlightel.length) {
-                                        highlightel.remove();
-                                    }
-                                }
-                            }
                             self.appendComment(response, self.elementselector.find('.studentquiz-comment-replies'));
                         });
                         return true;
@@ -459,9 +463,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     // Loop comments and replies to get id and bind event for button inside it.
                     var el = element.find('#post' + data.id);
                     var i = 0;
-                    for (i; i < data.replies.length; i++) {
-                        var reply = data.replies[i];
-                        self.bindReplyEvent(reply, el);
+                    if (data.ispost && data.hasOwnProperty('replies')) {
+                        for (i; i < data.replies.length; i++) {
+                            var reply = data.replies[i];
+                            self.bindReplyEvent(reply, el);
+                        }
                     }
                     el.find('.studentquiz-comment-btndelete').click(function(e) {
                         self.bindDeleteEvent(data);
@@ -723,9 +729,15 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     for (i; i < data.length; i++) {
                         var item = data[i];
                         item.expanded = expanded;
+                        if (self.referer) {
+                            item.reportlink =  item.reportlink + '&referer=' + self.referer;
+                        }
                         var j = 0;
                         for (j; j < item.replies.length; j++) {
                             var reply = item.replies[j];
+                            if (self.referer) {
+                                reply.reportlink =  reply.reportlink + '&referer=' + self.referer;
+                            }
                         }
                     }
                     return single ? data[0] : data;
@@ -1186,7 +1198,41 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     setTimeout(function() {
                         clearInterval(interval);
                     }, 5000);
-                }
+                },
+
+                parseQueryString: function (query) {
+                    var vars = query.split("&");
+                    var query_string = {};
+                    for (var i = 0; i < vars.length; i++) {
+                        var pair = vars[i].split("=");
+                        var key = decodeURIComponent(pair[0]);
+                        var value = decodeURIComponent(pair[1]);
+                        // If first entry with this name
+                        if (typeof query_string[key] === "undefined") {
+                            query_string[key] = decodeURIComponent(value);
+                            // If second entry with this name
+                        } else if (typeof query_string[key] === "string") {
+                            var arr = [query_string[key], decodeURIComponent(value)];
+                            query_string[key] = arr;
+                            // If third or later entry with this name
+                        } else {
+                            query_string[key].push(decodeURIComponent(value));
+                        }
+                    }
+                    return query_string;
+                },
+
+                scrollToElement: function(target, speed) {
+                    if (!target.length)
+                    {
+                        return;
+                    }
+                    if (typeof speed === 'undefined') {
+                        speed = 1000;
+                    }
+                    var top = target.offset().top;
+                    $('html,body').animate({scrollTop: top}, speed);
+                },
             };
         };
     });

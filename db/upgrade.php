@@ -573,5 +573,18 @@ function xmldb_studentquiz_upgrade($oldversion) {
 
         upgrade_mod_savepoint(true, 2019113000, 'studentquiz');
     }
+
+    if ($oldversion < 2019113001) {
+
+        $table = new xmldb_table('studentquiz');
+        $field = new xmldb_field('reportingemail', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'forcecommenting');
+        if (!$dbman->field_exists($table, $field)) {
+            // Add parentid field.
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2019113001, 'studentquiz');
+    }
+
     return true;
 }
