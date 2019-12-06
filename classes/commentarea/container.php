@@ -199,10 +199,8 @@ class container {
      * @param $refresh
      * @return array
      */
-    public function fetch($numbertoshow, $where = '', $whereparams = [], $order = false, $refresh = false) {
-        if (!$this->comments || $refresh) {
-            $this->comments = $this->query_comments($where, $whereparams, $order, $numbertoshow);
-        }
+    public function fetch($numbertoshow, $where = '', $whereparams = [], $order = false) {
+        $this->comments = $this->query_comments($where, $whereparams, $order, $numbertoshow);
         $comments = $this->comments;
         $list = [];
         // Check if we have any comments.
@@ -337,7 +335,7 @@ class container {
         }
 
         // It's a comment.
-        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id], false, true);
+        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id], false);
         if (!isset($comments[0])) {
             throw new \moodle_exception('cannotgetcomment', 'mod_studenquiz');
         }
