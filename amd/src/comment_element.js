@@ -66,7 +66,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 countServerData: [],
                 noCommentSelector: null,
                 lastcurrentcount: 0,
-                lasttotal:0,
+                lasttotal: 0,
                 referer: null,
                 highlight: 0,
 
@@ -88,7 +88,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     self.courseid = params.courseid;
                     self.questionid = parseInt(params.questionid);
                     self.idnumber = params.idnumber;
-                    self.formselector = self.elementselector.find('.studentquiz-comment-postform > form');
+                    self.formselector = self.elementselector.find('.studentquiz-comment-postform > div.comment-area-form');
                     self.contextId = parseInt(params.contextid);
                     self.userId = parseInt(params.userid);
                     self.numberToShow = parseInt(params.numbertoshow);
@@ -138,12 +138,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                 initServerRender: function() {
                     var self = this;
-                    $( ".studentquiz-comment-post" ).each(function() {
+                    $(".studentquiz-comment-post").each(function() {
                         var id = $(this).data('id');
                         var attrs = $(this).find("#c" + id);
                         var replies = [];
                         if (self.expand) {
-                           replies = attrs.data('replies') || [];
+                            replies = attrs.data('replies') || [];
                         }
                         var comment = {
                             id: id,
@@ -231,7 +231,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     var self = this;
                     // Interval to init atto editor, there are time when Atto's Javascript slow to init the editor, so we
                     // check interval here to make sure the Atto is init before calling our script.
-                    var interval = setInterval(function () {
+                    var interval = setInterval(function() {
                         if (self.formselector.find('.editor_atto_content').length !== 0) {
                             self.initAttoEditor(self.formselector);
                             clearInterval(interval);
@@ -730,13 +730,13 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         var item = data[i];
                         item.expanded = expanded;
                         if (self.referer) {
-                            item.reportlink =  item.reportlink + '&referer=' + self.referer;
+                            item.reportlink = item.reportlink + '&referer=' + self.referer;
                         }
                         var j = 0;
                         for (j; j < item.replies.length; j++) {
                             var reply = item.replies[j];
                             if (self.referer) {
-                                reply.reportlink =  reply.reportlink + '&referer=' + self.referer;
+                                reply.reportlink = reply.reportlink + '&referer=' + self.referer;
                             }
                         }
                     }
@@ -747,14 +747,17 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 * Convert form data to Json require for web service.
                 * */
                 convertFormToJson: function(form) {
-                    var array = form.serializeArray();
-                    var json = {};
-
-                    $.each(array, function() {
-                        json[this.name] = this.value || '';
+                    var self = this;
+                    var data = {};
+                    self.formselector.find(":input").each(function() {
+                        var type = $(this).prop("type");
+                        var name = $(this).attr('name');
+                        // checked radios/checkboxes
+                        if ((type === "checkbox" || type === "radio") && this.checked || (type !== "button" && type !== "submit")) {
+                            data[name] = $(this).val();
+                        }
                     });
-
-                    return json;
+                    return data;
                 },
 
                 /*
@@ -837,9 +840,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     fragment.loadFragment('mod_studentquiz', 'commentform', self.contextId, params).done(function(html, js) {
                         Templates.replaceNodeContents(appendselector, html, js);
                         appendselector.find('#id_message' + item.id + 'editable').focus();
-                        appendselector.find('form').submit(function(e) {
-                            e.preventDefault();
-                        });
                         M.util.js_complete(self.ACTION_LOAD_FRAGMENT_FORM);
                         self.bindFragmentFormEvent(appendselector, item);
                     });
@@ -851,7 +851,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 bindFragmentFormEvent: function(containerSelector, item) {
                     var self = this;
                     var fragmentsubmitbtn = containerSelector.find('#id_submitbutton');
-                    var formselector = containerSelector.find('form');
+                    var formselector = containerSelector.find('div.comment-area-form');
                     fragmentsubmitbtn.click(function() {
                         var formdata = self.convertFormToJson(formselector);
                         // Check message field is required.
@@ -1200,7 +1200,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     }, 5000);
                 },
 
-                parseQueryString: function (query) {
+                parseQueryString: function(query) {
                     var vars = query.split("&");
                     var query_string = {};
                     for (var i = 0; i < vars.length; i++) {
@@ -1223,8 +1223,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 },
 
                 scrollToElement: function(target, speed) {
-                    if (!target.length)
-                    {
+                    if (!target.length) {
                         return;
                     }
                     if (typeof speed === 'undefined') {

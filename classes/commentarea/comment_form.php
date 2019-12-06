@@ -58,10 +58,10 @@ class comment_form extends \moodleform {
 
         $unique = $questionid . '_' . $replyto;
 
-        \MoodleQuickForm::registerElementType('comment_editor', "$CFG->libdir/form/editor.php", comment_simple_editor::class);
+        \MoodleQuickForm::registerElementType('studentquiz_comment_editor', "$CFG->libdir/form/editor.php", comment_simple_editor::class);
 
         $mform->addElement('html', \html_writer::start_tag('div', array('id' => 'studentquiz_customeditor_' . $unique)));
-        $mform->addElement('comment_editor', 'message', $submitlabel,
+        $mform->addElement('studentquiz_comment_editor', 'message', $submitlabel,
                 ['id' => 'id_editor_question_' . $unique],
                 ['context' => $context]
         );
@@ -81,9 +81,9 @@ class comment_form extends \moodleform {
 
         $cancelbutton = isset($this->_customdata['cancelbutton']) ? $this->_customdata['cancelbutton'] : self::SHOW_CANCEL_BUTTON;
 
-        $buttonarray[] = &$mform->createElement('submit', 'submitbutton', $submitlabel, ['class' => 'btn-submit']);
+        $buttonarray[] = &$mform->createElement('button', 'submitbutton', $submitlabel, ['class' => 'btn-submit']);
         if ($cancelbutton) {
-            $buttonarray[] = &$mform->createElement('cancel');
+            $buttonarray[] = &$mform->createElement('button', 'cancel', get_string('cancel'), ['class' => 'btn- btn-secondary']);
         }
         $mform->addGroup($buttonarray, 'buttonar', '', [' '], false);
         $mform->closeHeaderBefore('buttonar');
@@ -101,7 +101,9 @@ class comment_form extends \moodleform {
      * @return string HTML for form
      */
     public function get_html() {
-        return $this->_form->toHtml();
+        $html = preg_replace("~<form~", "<div", $this->_form->toHtml());
+        $html = preg_replace("~</form>~", "</div>", $html);
+        return $html;
     }
 
     /**
