@@ -27,6 +27,7 @@
         <FIELD NAME="excluderoles" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" COMMENT="Property which system roles are excluded in the ranking"/>
         <FIELD NAME="forcerating" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Property if rating is enforced in question attempt"/>
         <FIELD NAME="forcecommenting" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Property if commenting is enforced in question attempt"/>
+        <FIELD NAME="reportingemail" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Email address for reporting unacceptable comments"/>
         <FIELD NAME="opensubmissionfrom" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="If non-zero, then users cannot create questions to the StudentQuiz until the specified date"/>
         <FIELD NAME="closesubmissionfrom" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="If non-zero, users cannot create questions to the StudentQuiz after the specified date"/>
         <FIELD NAME="openansweringfrom" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="If non-zero, then users cannot attempt questions until the specified date"/>

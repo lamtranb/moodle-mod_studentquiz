@@ -143,4 +143,14 @@ class utils {
                 'totaldelete' => $deletepostcount + $deletereplycount
         ]);
     }
+
+    /**
+     * Extract reporting emails from string of reportingemail column in studentquiz.
+     *
+     * @param $string
+     * @return array
+     */
+    public static function extract_reporting_emails_from_string($string) : array {
+        return $string ? explode(';', $string) : [];
+    }
 }

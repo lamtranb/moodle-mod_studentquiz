@@ -150,7 +150,6 @@ Feature: Create comment as an user
     And I press "Finish"
     Then "Create new question" "button" should exist
 
-
   @javascript
   Scenario: Admin delete comment and check if student can view.
     # Save document into course 1.
@@ -183,3 +182,43 @@ Feature: Create comment as an user
     And I should see "Deleted comment"
     And I should see "This comment was deleted by the author on"
 
+  @javascript
+  Scenario: Test report comment feature.
+    Given I log in as "admin"
+    And I am on "Course 1" course homepage
+    # Try to report when disable report feature
+    When I follow "StudentQuiz 1"
+    And I click on "Start Quiz" "button"
+    And I set the field "True" to "1"
+    Then I press "Check"
+    When I enter the text "Comment 1" in the "Add comment" editor
+    And I press "Add comment"
+    # Not visible!
+    Then I should not see "Report"
+    # Enable report feature.
+    When I follow "StudentQuiz 1"
+    And I navigate to "Edit settings" in current page administration
+    And  I follow "Edit settings"
+    # Try to input wrong format.
+    And I set the field "Email for reporting offensive comments" to "admin@domain.com;"
+    And I press "Save and display"
+    Then I should see "This email address is not valid. Please enter a single email address."
+    # Then input right one.
+    When I set the field "Email for reporting offensive comments" to "admin@domain.com;admin1@domain.com"
+    And I press "Save and display"
+    Then I should see "StudentQuiz 1"
+    # Try to report.
+    When I click on "Start Quiz" "button"
+    Then I set the field "True" to "1"
+    And I press "Check"
+    Then I enter the text "Comment 1" in the "Add comment" editor
+    And I press "Add comment"
+    # Test with Report feature.
+    When I follow "Report"
+    And I should see "Report a comment as unacceptable"
+    And I set the field "It is abusive" to "1"
+    And I press "Send report"
+    Then I should see "Your report has been sent successfully"
+    When I press "Continue"
+    # After report, check we navigate back.
+    Then I should see "Add comment"

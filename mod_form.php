@@ -77,6 +77,12 @@ class mod_studentquiz_mod_form extends moodleform_mod {
             $this->add_intro_editor();
         }
 
+        // Email address for reporting unacceptable comment for this studentquiz, default is blank.
+        $mform->addElement('text', 'reportingemail', get_string('reportingemail', 'studentquiz'), ['size' => 64]);
+        $mform->setType('reportingemail', PARAM_NOTAGS);
+        $mform->addRule('reportingemail', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
+        $mform->addHelpButton('reportingemail', 'reportingemail', 'studentquiz');
+
         $mform->addElement('header', 'sectionranking', get_string('settings_section_header_ranking', 'studentquiz'));
 
         // Field anonymous Ranking.
@@ -242,6 +248,34 @@ class mod_studentquiz_mod_form extends moodleform_mod {
                 $data['openansweringfrom'] >= $data['closeansweringfrom']) {
             $errors['closeansweringfrom'] = get_string('answeringndbeforestart', 'studentquiz');
         }
+        if (!empty($data['reportingemail']) && !$this->validate_emails($data['reportingemail'])) {
+            $errors['reportingemail'] = get_string('invalidemail', 'forumng');
+        }
         return $errors;
+    }
+
+    private function validate_emails($emails) {
+        // Loop through string looking for ';' as seperators.
+        $emailarray = explode(';' , $emails);
+        foreach ($emailarray as $email) {
+            if (!validate_email($email) ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public function get_data() {
+        $data = parent::get_data();
+        if (!$data) {
+            return false;
+        }
+
+        // Set the reportingemail to null if empty so that they are consistency.
+        if (empty($data->reportingemail)) {
+            $data->reportingemail = null;
+        }
+
+        return $data;
     }
 }
