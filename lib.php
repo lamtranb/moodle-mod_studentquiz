@@ -29,6 +29,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use mod_studentquiz\commentarea\comment_form;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/lib/questionlib.php');
@@ -467,4 +469,29 @@ function mod_studentquiz_question_pluginfile($course, $context, $component,
     }
 
     send_stored_file($file, 0, 0, $forcedownload, $options);
+}
+
+/**
+ * Comment form fragment.
+ *
+ * @param $params
+ * @return string
+ */
+function mod_studentquiz_output_fragment_commentform($params) {
+
+    if (!isset($params['replyto'])) {
+        throw new moodle_exception('missingparam', 'mod_studentquiz');
+    }
+
+    // Assign data to edit post form, this will also check for session key.
+    $mform = new comment_form('', array(
+            'params' => [
+                    'questionid' => $params['questionid'],
+                    'cmid' => $params['cmid'],
+                    'replyto' => $params['replyto'],
+            ],
+            'cancelbutton' => isset($params['cancelbutton']) ? $params['cancelbutton'] : false
+    ));
+
+    return $mform->get_html();
 }

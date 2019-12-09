@@ -22,7 +22,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use mod_studentquiz\commentarea\comment;
+use mod_studentquiz\commentarea\container;
 use mod_studentquiz\local\studentquiz_helper;
+use mod_studentquiz\utils;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -1367,20 +1370,6 @@ EOT;
 
 class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
     /**
-     * Generate some HTML to display comment list
-     * @param array $comments comments ordered by createdby ASC
-     * @param int $userid viewing user id
-     * @param int $cmid course module id
-     * @param bool $anonymize users can't see other comment authors user names except ismoderator
-     * @param bool $ismoderator can delete all comments, can see all usernames
-     * @return string HTML fragment
-     * TODO: move mod_studentquiz_comment_renderer in here!
-     */
-    public function comment_list($comments, $userid, $cmid, $anonymize = true, $ismoderator = false) {
-        return mod_studentquiz_comment_renderer($comments, $userid, $cmid, $anonymize, $ismoderator);
-    }
-
-    /**
      * Generate some HTML (which may be blank) that appears in the outcome area,
      * after the question-type generated output.
      *
@@ -1389,23 +1378,17 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
      *
      * @param question_definition $question the current question.
      * @param question_display_options $options controls what should and should not be displayed.
-     * @param array $comments comments ordered by createdby ASC
      * @param int $userid viewing user id
-     * @param bool $anonymize users can't see other comment authors user names except ismoderator
-     * @param bool $ismoderator can delete all comments, can see all usernames
      * @return string HTML fragment
      * @return string HTML fragment.
      */
     public function feedback(question_definition $question,
                              question_display_options $options, $cmid,
-                             $comments, $userid, $anonymize = true, $ismoderator = false) {
+                             $userid) {
         global $COURSE;
         $studentquiz = mod_studentquiz_load_studentquiz($this->page->url->get_param('cmid'), $this->page->context->id);
         $forcerating = boolval($studentquiz->forcerating);
-        $forcecommenting = boolval($studentquiz->forcecommenting);
-        return $this->render_state_choice($question->id, $COURSE->id, $cmid)
-                . $this->render_rate($question->id, $forcerating)
-                . $this->render_comment($cmid, $question->id, $comments, $userid, $anonymize, $ismoderator, $forcecommenting);
+        return $this->render_state_choice($question->id, $COURSE->id, $cmid). $this->render_rate($question->id, $forcerating);
     }
 
     /**
@@ -1469,37 +1452,6 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
     }
 
     /**
-     * Generate some HTML to display comment form for add comment
-     *
-     * @param int $questionid Question id
-     * @param int $cmid Course module id
-     * @param bool $forcecommenting True if enforce commenting is turned on
-     * @return string HTML fragment
-     * @throws coding_exception
-     */
-    protected function comment_form($questionid, $cmid, $forcecommenting = false) {
-        $output = '';
-
-        $output .= html_writer::tag('label', get_string('add_comment', 'mod_studentquiz'), ['for' => 'add_comment_field']);
-        if ($forcecommenting) {
-            $output .= html_writer::span($this->output->pix_icon('req', get_string('requiredelement', 'form')), 'req');
-        }
-        $output .= $this->output->help_icon('comment_help', 'mod_studentquiz') . ':';
-        $output .= html_writer::tag('p', html_writer::tag(
-                'textarea', '',
-                ['id' => 'add_comment_field', 'class' => 'add_comment_field form-control', 'name' => 'q' . $questionid]));
-        $output .= html_writer::div(get_string('comment_error', 'mod_studentquiz'), 'hide error comment_error');
-        $output .= html_writer::div(get_string('comment_error_unsaved', 'mod_studentquiz'), 'hide error comment_error_unsaved');
-        $output .= html_writer::tag('p', html_writer::tag(
-                'button',
-                get_string('add_comment', 'mod_studentquiz'),
-                ['type' => 'button', 'class' => 'add_comment btn btn-secondary']));
-        $output .= html_writer::tag('input', '', ['type' => 'hidden', 'name' => 'cmid', 'value' => $cmid]);
-
-        return $output;
-    }
-
-    /**
      * Generate some HTML to display rating
      *
      * @param int $questionid Question id
@@ -1529,22 +1481,19 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
      * @param int $questionid Question id
      * @param array $comments List of comment
      * @param int $userid User id
-     * @param bool $anonymize True if anonymize setting is turned on
-     * @param bool $ismoderator True if user is moderator
-     * @param bool $forcecommenting True if enforce commenting is turned on
      * @return string HTML fragment
      * @throws coding_exception
      */
-    public function render_comment($cmid, $questionid, $comments, $userid, $anonymize = true, $ismoderator = false, $forcecommenting = false) {
+	public function render_comment($cmid, $questionid, $userid) {
+        $renderer = $this->page->get_renderer('mod_studentquiz', 'comment');
         return html_writer::div(
-            html_writer::div(
-                $this->comment_form($questionid, $cmid, $forcecommenting)
-                . html_writer::div(
-                    $this->comment_list($comments, $userid, $cmid, $anonymize, $ismoderator),
-                    'comment_list'
+                html_writer::div(
+                        html_writer::div(
+                                $renderer->render_comment_area($questionid, $userid, $cmid),
+                                'comment_list'),
+                        'comments'
                 ),
-                'comments'),
-            'studentquiz_behaviour'
+                'studentquiz_behaviour comment_list_studentquiz_behaviour'
         );
     }
 
@@ -1868,5 +1817,72 @@ class mod_studentquiz_ranking_renderer extends mod_studentquiz_renderer {
         $rankingresultset->close();
         $data = $this->render_table_data($celldata, $rowstyle);
         return $this->render_table($data, $size, $align, $head, $caption, 'generaltable rankingtable');
+    }
+}
+
+class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
+
+    const MODNAME = 'mod_studentquiz';
+
+    /**
+     * Generate HTML to render comments
+     *
+     * @param int $questionid, question id
+     * @param int $userid, viewing user id
+     * @param int $cmid, course module id
+     * @return string HTML fragment
+     */
+    public function render_comment_area($questionid, $userid, $cmid) {
+        global $COURSE;
+
+        $data = [
+                'id' => 'question_comment_area_' . $questionid
+        ];
+
+        list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($questionid, $cmid);
+        $commentarea = new container($studentquiz, $question, $cm, $context);
+        $comments = $commentarea->fetch_all($commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT);
+        $res = [];
+        if (count($comments) > 0) {
+            foreach ($comments as $key => $comment) {
+                /** @var comment $comment */
+                $item = $comment->convert_to_object();
+                $item->replies = [];
+                $res[] = $item;
+            }
+        }
+
+        $jsdata = [
+                'id' => $data['id'],
+                'courseid' => $COURSE->id,
+                'questionid' => $questionid,
+                'contextid' => $context->id,
+                'userid' => $userid,
+                'numbertoshow' => container::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT,
+                'cmid' => $cmid
+        ];
+        $mform = new \mod_studentquiz\commentarea\comment_form(null, [
+                'params' => [
+                        'index' => $data['id'],
+                        'replyto' => VALUE_DEFAULT,
+                        'questionid' => $questionid,
+                        'cmid' => $cmid,
+                ],
+                'cancelbutton' => false
+        ]);
+        $data['postform'] = $mform->get_html();
+
+        $data['comments'] = $res;
+        $count = utils::count_comments_and_replies($res);
+        $current = $count['total'];
+        $total = $commentarea->get_num_comments();
+        $data['postcount'] = get_string('current_of_total', 'mod_studentquiz', compact('current', 'total'));
+
+        // Need to pass this to js to calculate current of total comments.
+        $jsdata = array_merge($jsdata, compact('count','total'));
+
+        $this->page->requires->js_call_amd(self::MODNAME . '/comment_initial', 'init', [json_encode($jsdata)]);
+        $output = $this->output->render_from_template(self::MODNAME . '/comment_area', $data);
+        return $output;
     }
 }
