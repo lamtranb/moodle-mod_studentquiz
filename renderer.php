@@ -1512,6 +1512,62 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
         }
         return $output;
     }
+
+    /**
+     * Render navigation bar of attempt page.
+     *
+     * @param bool $hasprevious
+     * @param bool $hasnext
+     * @param bool $hasanswered
+     * @param bool $canfinish
+     * @return string
+     */
+    public function render_navigation_bar($hasprevious, $hasnext, $hasanswered, $canfinish) {
+        $html = html_writer::start_tag('div', array('class' => 'mod-studentquiz-attempt-nav row'));
+        $html .= html_writer::start_tag('div', array('class' => 'col-md-4'));
+        $html .= html_writer::start_tag('div', array('class' => 'pull-left'));
+        if ($hasprevious) {
+            $html .= html_writer::empty_tag('input',
+                    array('type' => 'submit', 'name' => 'previous',
+                            'value' => get_string('previous_button', 'studentquiz'), 'class' => 'btn btn-primary'));
+        } else {
+            $html .= '&nbsp;';
+        }
+        $html .= html_writer::end_tag('div');
+        $html .= html_writer::end_tag('div');
+
+        $html .= html_writer::start_tag('div', array('class' => 'col-md-4'));
+        $html .= html_writer::start_tag('div', array('class' => 'mdl-align'));
+
+        // Not has rated, is done using javascript.
+        if ($canfinish && ($hasnext || !$hasanswered)) {
+            $html .= html_writer::empty_tag('input',
+                    array('type' => 'submit', 'name' => 'finish',
+                            'value' => get_string('abort_button', 'studentquiz'), 'class' => 'btn'));
+        }
+
+        $html .= html_writer::end_tag('div');
+        $html .= html_writer::end_tag('div');
+        $html .= html_writer::start_tag('div', array('class' => 'col-md-4'));
+        $html .= html_writer::start_tag('div', array('class' => 'pull-right'));
+
+        // And not hasrated, but done using javascript as not showing the next button seems not intuitive.
+        if ($hasanswered) {
+            if ($hasnext) {
+                $html .= html_writer::empty_tag('input',
+                        array('type' => 'submit', 'name' => 'next',
+                                'value' => get_string('next_button', 'studentquiz'), 'class' => 'btn btn-primary'));
+            } else { // Finish instead of next on the last question.
+                $html .= html_writer::empty_tag('input',
+                        array('type' => 'submit', 'name' => 'finish',
+                                'value' => get_string('finish_button', 'studentquiz'), 'class' => 'btn btn-primary'));
+            }
+        }
+        $html .= html_writer::end_tag('div');
+        $html .= html_writer::end_tag('div');
+        $html .= html_writer::end_tag('div');
+        return $html;
+    }
 }
 
 class mod_studentquiz_report_renderer extends mod_studentquiz_renderer{
