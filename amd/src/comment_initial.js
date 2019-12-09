@@ -1,4 +1,3 @@
-<?php
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -14,22 +13,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Defines the version and other meta-info about the plugin
+/*
+ * JavaScript to create all comment elements for comment area.
  *
- * Setting the $plugin->version to 0 prevents the plugin from being installed.
- * See https://docs.moodle.org/dev/version.php for more info.
- *
- * @package    mod_studentquiz
- * @copyright  2017 HSR (http://www.hsr.ch) <your@email.address>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package mod_studentquiz
+ * @copyright 2019 The Open University
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'mod_studentquiz';
-$plugin->version      = 2019113002;
-$plugin->release      = 'v4.0.4';
-$plugin->requires     = 2018051700; // Version MOODLE_35, 3.5.0+.
-$plugin->maturity     = MATURITY_STABLE;
-$plugin->cron         = 0;
+/**
+ * @module mod_studentquiz/comment_element
+ */
+define(['jquery', 'mod_studentquiz/comment_element'], function($, CommentElement) {
+    var t = {
+        init: function(params) {
+            var commentElement = new CommentElement();
+            commentElement.init(JSON.parse(params));
+        }
+    };
+    return t;
+});
