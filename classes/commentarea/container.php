@@ -40,6 +40,22 @@ class container {
     const COMMENT_CREATED = 'comment_created';
     const COMMENT_DELETED = 'comment_deleted';
 
+    const SORT_DATE_ASC = 'created_asc';
+    const SORT_DATE_DESC = 'created_desc';
+    const SORT_FIRSTNAME_ASC = 'firstname_asc';
+    const SORT_FIRSTNAME_DESC = 'firstname_desc';
+    const SORT_LASTNAME_ASC = 'lastname_asc';
+    const SORT_LASTNAME_DESC = 'lastname_desc';
+
+    const SPECIAL_SORT_FEATURES = [
+            self::SORT_FIRSTNAME_ASC,
+            self::SORT_FIRSTNAME_DESC,
+            self::SORT_LASTNAME_ASC,
+            self::SORT_LASTNAME_DESC
+    ];
+
+    const USER_PREFERENCE_SORT = 'mod_studentquiz_comment_sort';
+
     /** @var \question_definition $question - Question class. */
     private $question;
 
@@ -56,7 +72,7 @@ class container {
     private $studentquiz;
 
     /** @var string - Basic order to get comments. */
-    private $order = 'created ASC';
+    private $defaultsort = 'created ASC';
 
     /** @var object|\stdClass - Config of Moodle. Only call it once when __construct */
     private $config;
@@ -67,9 +83,14 @@ class container {
     /** @var object|\stdClass - Current course of Moodle. Only call it once when __construct */
     private $course;
 
-    /**
+    /** @var string - Current sort feature */
+    private $sort;
+
+    private $limit = null;
 
     /**
+     *
+     * /**
      * @var array List of users has comments.
      */
     private $userlist = [];
@@ -98,6 +119,7 @@ class container {
         $this->user = clone $USER;
         $this->course = clone $COURSE;
         $this->reportemails = utils::extract_reporting_emails_from_string($studentquiz->reportingemail);
+        $this->setup_sort();
     }
 
     /**
@@ -179,14 +201,7 @@ class container {
      * @return array
      */
     public function fetch_all($numbertoshow) {
-        // When we get all comments, sort as oldest to newest
-        if ($numbertoshow === self::SHOW_ALL) {
-            $order = $this->order;
-        } else {
-            // When we get limit, get the latest comments.
-            $order = 'created DESC';
-        }
-        return $this->fetch($numbertoshow, ' AND parentid = ?', [self::PARENTID], $order);
+        return $this->fetch($numbertoshow, ' AND parentid = ?', [self::PARENTID]);
     }
 
     /**
@@ -199,13 +214,13 @@ class container {
      * @param $refresh
      * @return array
      */
-    public function fetch($numbertoshow, $where = '', $whereparams = [], $order = false) {
-        $this->comments = $this->query_comments($where, $whereparams, $order, $numbertoshow);
+    public function fetch($numbertoshow, $where = '', $whereparams = []) {
+        $this->comments = $this->query_comments($where, $whereparams, $numbertoshow);
         $comments = $this->comments;
         $list = [];
         // Check if we have any comments.
         if ($comments) {
-            // we need to get users
+            // we need to get users.
             $this->set_user_list($comments);
             // Obtain comments relationships.
             $tree = $this->build_tree($comments);
@@ -270,38 +285,38 @@ class container {
      * @param bool $order - Order.
      * @return array - Array of comment.
      */
-    public function query_comments($where = '', $whereparams = [], $order = false, $limit = false) {
+    public function query_comments($where = '', $whereparams = [], $limit = false) {
         global $DB;
         $basicwhere = 'questionid = ?';
         $where = !$where ? $basicwhere : $basicwhere . ' ' . $where;
         $whereparams = array_merge([$this->question->id], $whereparams);
-        // Set order.
-        if ($order === false) {
-            $order = $this->order;
-        }
+
         // Set limit.
-        if (!$limit || !is_numeric($limit) || $limit == self::SHOW_ALL) {
-            $limit = '';
-        } else {
-            $limit = 'LIMIT ' . $limit;
+        if (is_numeric($limit) && $limit > 0) {
+            $this->limit = $limit;
         }
+        $limit = $this->limit ? 'LIMIT ' . $this->limit : '';
+
+        $sortfetchroot= $this->get_sort_fetch_root();
+        $sortroot = $this->get_sort_order();
+
         $query = "
         WITH
         root AS
         (
-            SELECT * 
-            FROM {studentquiz_comment} 
+            SELECT c.* 
+            FROM {studentquiz_comment} c 
             WHERE
                 $where
             ORDER BY 
-                $order 
+                $sortfetchroot 
             $limit
         )
-        (SELECT *, ROW_NUMBER() OVER(ORDER BY created) AS rownumber FROM root)
+        (SELECT *, ROW_NUMBER() OVER(ORDER BY $sortroot) AS rownumber FROM root)
         UNION
-        (SELECT child.*, ROW_NUMBER() OVER(ORDER BY created) + (SELECT COUNT(*) FROM root) AS rownumber 
-            FROM {studentquiz_comment} AS child 
-            WHERE child.parentid IN (SELECT id FROM root))
+        (SELECT *, ROW_NUMBER() OVER(ORDER BY created) + (SELECT COUNT(*) FROM root) AS rownumber 
+            FROM {studentquiz_comment} 
+            WHERE parentid IN (SELECT id FROM root))
         ORDER BY
             rownumber ASC";
         // Retrieve comments from question.
@@ -335,7 +350,7 @@ class container {
         }
 
         // It's a comment.
-        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id], false);
+        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id]);
         if (!isset($comments[0])) {
             throw new \moodle_exception('cannotgetcomment', 'mod_studenquiz');
         }
@@ -436,7 +451,129 @@ class container {
         return $this->userlist[$id];
     }
 
+    /**
+     * Get array of emails used to report comments.
+     * Setting in StudentQuiz setting.
+     *
+     * @return array
+     */
     public function get_reporting_emails() {
         return $this->reportemails;
+    }
+
+    /**
+     * Get anonymous mode.
+     *
+     * @return bool
+     */
+    public function anonymous_mode() {
+        $context = $this->get_context();
+        $studentquiz = $this->get_studentquiz();
+        $capability = $studentquiz->anonymrank;
+        if (has_capability('mod/studentquiz:unhideanonymous', $context)) {
+            $capability = false;
+        }
+        return $capability;
+    }
+
+    /**
+     * Get array of sortable in current context.
+     *
+     * @return array
+     */
+    public function get_sortable_fields() {
+        $sortable = [
+                self::SORT_DATE_ASC,
+                self::SORT_DATE_DESC
+        ];
+        // In anonymous mode, those features is not available.
+        if (!$this->anonymous_mode()) {
+            $sortable = array_merge($sortable, self::SPECIAL_SORT_FEATURES);
+        }
+        return $sortable;
+    }
+
+    /**
+     * Check if current sort feature can be used to sort.
+     *
+     * @param string $field
+     * @return bool
+     */
+    public function is_sortable($field) {
+        return in_array($field, $this->get_sortable_fields());
+    }
+
+    /**
+     * Set $sortfield and $sortby from user preferences.
+     * If not, then create default.
+     * If current feature is not available from current context, then return default.
+     *
+     * @throws \coding_exception
+     */
+    public function setup_sort() {
+        $sort = get_user_preferences(self::USER_PREFERENCE_SORT);
+        if (is_null($sort)) {
+            set_user_preference(self::USER_PREFERENCE_SORT, self::SORT_DATE_ASC);
+            $sort = get_user_preferences(self::USER_PREFERENCE_SORT);
+        }
+        // In case we are in anonymous mode, and current sort is not supported, return default sort.
+        if ($this->anonymous_mode() && !$this->is_sortable($sort)) {
+            $sort = self::SORT_DATE_ASC;
+        }
+        $this->sort = $sort;
+    }
+
+    public function is_special_sort() {
+        return in_array($this->sort, self::SPECIAL_SORT_FEATURES);
+    }
+
+    /**
+     * Convert sort feature to database order.
+     *
+     * @return string
+     */
+    public function extract_user_preference_sort() {
+        $sort = explode('_', $this->sort);
+        $sortfield = $sort[0];
+        $sortby = $sort[1];
+        // Build into order query. Example: created_at => 'created asc'.
+        $dbsort = $sortfield . ' ' . $sortby;
+        return $dbsort;
+    }
+
+    /**
+     * This function is to get root rows, if we have limit then it will always get latest rows.
+     * If sort is special, then it will be second priority.
+     *
+     * @return string
+     */
+    public function get_sort_fetch_root() {
+        $sort = 'created ASC';
+        // If have limit, get latest.
+        if ($this->limit > 0) {
+            $sort = 'created DESC';
+        }
+        if ($this->is_special_sort()) {
+             $sort = $this->extract_user_preference_sort(). ', '.$sort;
+        }
+        return $sort;
+    }
+
+    /**
+     * Sort after we found root rows. Except Sort date desc, it will always to use created ASC.
+     * If sort is special, then created ASC will be second priority.
+     *
+     * @return string
+     */
+    public function get_sort_order() {
+        $sort = 'created ASC';
+        $usersort = $this->extract_user_preference_sort();
+        if ($this->sort === self::SORT_DATE_DESC) {
+            return $usersort;
+        }
+        if ($this->is_special_sort()) {
+            $sort = $this->extract_user_preference_sort(). ', '. $sort;
+        }
+        return $sort;
     }
 }
