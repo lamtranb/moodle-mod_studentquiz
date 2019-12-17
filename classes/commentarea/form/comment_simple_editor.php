@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace mod_studentquiz\commentarea;
+namespace mod_studentquiz\commentarea\form;
 
 defined('MOODLE_INTERNAL') || die;
 
@@ -29,23 +29,25 @@ use MoodleQuickForm_editor;
  */
 class comment_simple_editor extends MoodleQuickForm_editor {
 
+    /** @var string - Atto Toolbar define. */
     const ATTO_TOOLBAR = 'style1 = bold, italic
         style2 = link, unlink
         style3 = superscript, subscript
         style4 = unorderedlist, orderedlist
         style5 = html';
 
+    /** @var array - Attributes used for this editor. */
     const ATTRIBUTES = [
             'cols' => 60,
             'rows' => 10,
             'class' => 'comment_editor_container'
     ];
 
+    /** @var array - Options used for this editor. */
     const OPTIONS = [
             'noclean' => VALUE_DEFAULT,
             'trusttext' => VALUE_DEFAULT
     ];
-
 
     /**
      * comment_simple_editor constructor.
@@ -57,7 +59,7 @@ class comment_simple_editor extends MoodleQuickForm_editor {
      */
     public function __construct($elementname = null, $elementlabel = null, $attributes = [], $options = []) {
         $attributes = array_merge($attributes, self::ATTRIBUTES);
-        $options = array_merge($options, self::OPTIONS) ;
+        $options = array_merge($options, self::OPTIONS);
         $this->_options['atto:toolbar'] = self::ATTO_TOOLBAR;
         parent::__construct($elementname, $elementlabel, $attributes, $options);
     }

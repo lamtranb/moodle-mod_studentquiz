@@ -31,88 +31,71 @@ require_once($CFG->dirroot . '/mod/studentquiz/locallib.php');
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * Get comments services implementation.
+ * Expand comment services implementation.
  *
  * @package mod_studentquiz
  * @copyright 2019 The Open University
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class get_comments extends external_api {
+class expand_comment_api extends external_api {
 
     /**
      * Gets function parameter metadata.
      *
      * @return external_function_parameters Parameter info
      */
-    public static function get_comments_parameters() {
+    public static function expand_comment_parameters() {
         return new external_function_parameters([
                 'questionid' => new external_value(PARAM_INT, 'Question ID'),
                 'cmid' => new external_value(PARAM_INT, 'Cm ID'),
-                'numbertoshow' => new external_value(PARAM_INT, 'Number of posts to show 0 will return all posts and its replies',
-                        VALUE_DEFAULT, 3),
+                'commentid' => new external_value(PARAM_INT, 'Comment ID'),
         ]);
     }
 
     /**
      * Returns description of method result values.
      *
-     * @return external_multiple_structure
+     * @return external_single_structure
      */
-    public static function get_comments_returns() {
-
+    public static function expand_comment_returns() {
         $replystructure = utils::get_comment_area_webservice_comment_reply_structure();
-
         $repliesstructure = $replystructure;
         $repliesstructure['replies'] = new external_multiple_structure(
                 new external_single_structure($replystructure), 'List of replies belong to first level comment'
         );
-
-        return new external_single_structure([
-                'total' => new external_value(PARAM_INT, 'Total comments belong to this question'),
-                'data' => new external_multiple_structure(new external_single_structure($repliesstructure), 'comments array')
-        ]);
+        return new external_single_structure($repliesstructure);
     }
 
     /**
-     * Get comments belong to question.
+     * Get posts belong to diccussion.
      *
-     * @param int $questionid - Question ID.
-     * @param int $cmid - CM ID.
-     * @param int $numbertoshow - Number comments to show.
-     * @return array
+     * @param int $questionid - Question ID
+     * @param int $cmid - CM ID
+     * @param int $commentid - Comment ID
+     * @return mixed
      */
-    public static function get_comments($questionid, $cmid, $numbertoshow) {
+    public static function expand_comment($questionid, $cmid, $commentid) {
 
-        $params = self::validate_parameters(self::get_comments_parameters(), [
+        $params = self::validate_parameters(self::expand_comment_parameters(), [
                 'questionid' => $questionid,
                 'cmid' => $cmid,
-                'numbertoshow' => $numbertoshow
+                'commentid' => $commentid
         ]);
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
-
         $commentarea = new container($studentquiz, $question, $cm, $context);
-        $comments = $commentarea->fetch_all($numbertoshow);
 
-        $data = [];
+        $comment = $commentarea->query_comment_by_id($params['commentid']);
 
-        /** @var comment $comment */
-        foreach ($comments as $key => $comment) {
-            $item = $comment->convert_to_object();
-            $item->replies = [];
-            if ($numbertoshow == 0) {
-                /** @var comment $reply */
-                foreach ($comment->get_replies() as $reply) {
-                    $item->replies[] = $reply->convert_to_object();
-                }
-            }
-            $data[] = $item;
+        $data = $comment->convert_to_object();
+
+        $data->replies = [];
+
+        /** @var comment $reply */
+        foreach ($comment->get_replies() as $reply) {
+            $data->replies[] = $reply->convert_to_object();
         }
 
-        return [
-                'total' => $commentarea->get_num_comments(),
-                'data' => $data
-        ];
-
+        return $data;
     }
 }

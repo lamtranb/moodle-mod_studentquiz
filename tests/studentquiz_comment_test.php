@@ -92,15 +92,10 @@ class mod_studentquiz_comment_testcase extends advanced_testcase {
         $this->studentquiz = mod_studentquiz_load_studentquiz($activity->cmid, $this->context->id);
         $this->cm = get_coursemodule_from_id('studentquiz', $activity->cmid);
 
-        // Create users.
-        $usernames = ['Student 1'];
-        $users = [];
-        foreach ($usernames as $username) {
-            $user = $this->getDataGenerator()->create_user(['firstname' => $username]);
-            $this->getDataGenerator()->enrol_user($user->id, $course->id, $studentrole->id);
-            $users[] = $user;
-        }
-        $this->users = $users;
+        // Create user.
+        $user = $this->getDataGenerator()->create_user(['firstname' => 'Student 1']);
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, $studentrole->id);
+        $this->users[] = $user;
 
         // Create questions in questionbank.
         $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');

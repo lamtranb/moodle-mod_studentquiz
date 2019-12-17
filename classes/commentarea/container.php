@@ -31,11 +31,16 @@ class container {
     /** @var int - Number of comments to show by default. */
     const NUMBER_COMMENT_TO_SHOW_BY_DEFAULT = 5;
 
+    /** @var int - Comment root parent id. */
     const PARENTID = 0;
 
+    /** @var int - Default value to show all comments and replies. */
     const SHOW_ALL = 0;
 
+    /** @var string - Created comment event name. */
     const COMMENT_CREATED = 'comment_created';
+
+    /** @var string - Deleted comment event name. */
     const COMMENT_DELETED = 'comment_deleted';
 
     /** @var \question_definition $question - Question class. */
@@ -47,17 +52,14 @@ class container {
     /** @var \stdClass $context - Context. */
     private $context;
 
-    /** @var array - Array of comments. */
-    private $comments;
+    /** @var array - Array of stored comments. */
+    private $storedcomments;
 
     /** @var object|\stdClass - Studentquiz data. */
     private $studentquiz;
 
     /** @var string - Basic order to get comments. */
-    private $order = 'created ASC';
-
-    /** @var object|\stdClass - Config of Moodle. Only call it once when __construct */
-    private $config;
+    private $basicorder = 'created ASC';
 
     /** @var object|\stdClass - Current user of Moodle. Only call it once when __construct */
     private $user;
@@ -65,7 +67,8 @@ class container {
     /** @var object|\stdClass - Current course of Moodle. Only call it once when __construct */
     private $course;
 
-    /**
+    /** @var null - Current set limit. */
+    private $currentlimit = null;
 
     /**
      * @var array List of users has comments.
@@ -81,13 +84,12 @@ class container {
      * @param $context
      */
     public function __construct($studentquiz, \question_definition $question, $cm, $context) {
-        global $CFG, $USER, $COURSE;
+        global $USER, $COURSE;
         $this->studentquiz = $studentquiz;
         $this->question = $question;
         $this->cm = $cm;
         $this->context = $context;
-        $this->comments = null;
-        $this->config = $CFG;
+        $this->storedcomments = null;
         $this->user = clone $USER;
         $this->course = clone $COURSE;
     }
@@ -99,15 +101,6 @@ class container {
      */
     public function get_user() {
         return $this->user;
-    }
-
-    /**
-     * Get Config of Moodle
-     *
-     * @return mixed
-     */
-    public function get_config() {
-        return $this->config;
     }
 
     /**
@@ -171,14 +164,7 @@ class container {
      * @return array
      */
     public function fetch_all($numbertoshow) {
-        // When we get all comments, sort as oldest to newest
-        if ($numbertoshow === self::SHOW_ALL) {
-            $order = $this->order;
-        } else {
-            // When we get limit, get the latest comments.
-            $order = 'created DESC';
-        }
-        return $this->fetch($numbertoshow, ' AND parentid = ?', [self::PARENTID], $order);
+        return $this->fetch($numbertoshow, ' AND parentid = ?', [self::PARENTID]);
     }
 
     /**
@@ -187,17 +173,15 @@ class container {
      * @param $numbertoshow
      * @param $where
      * @param $whereparams
-     * @param $order
-     * @param $refresh
      * @return array
      */
-    public function fetch($numbertoshow, $where = '', $whereparams = [], $order = false) {
-        $this->comments = $this->query_comments($where, $whereparams, $order, $numbertoshow);
-        $comments = $this->comments;
+    public function fetch($numbertoshow, $where = '', $whereparams = []) {
+        $this->storedcomments = $this->query_comments($where, $whereparams, $numbertoshow);
+        $comments = $this->storedcomments;
         $list = [];
         // Check if we have any comments.
         if ($comments) {
-            // we need to get users
+            // We need to get users.
             $this->set_user_list($comments);
             // Obtain comments relationships.
             $tree = $this->build_tree($comments);
@@ -241,17 +225,16 @@ class container {
     }
 
     /**
-     * Count all comments
+     * Count all comments.
      *
      * @return int
      */
     public function get_num_comments() {
         global $DB;
-        $count = $DB->count_records('studentquiz_comment', [
+        return $DB->count_records('studentquiz_comment', [
                 'questionid' => $this->get_question()->id,
                 'deleted' => 0
         ]);
-        return $count;
     }
 
     /**
@@ -259,46 +242,49 @@ class container {
      *
      * @param string $where - Comment conditions.
      * @param array $whereparams - Params for comment conditions.
-     * @param bool $order - Order.
+     * @param bool $limit - Limit comments.
      * @return array - Array of comment.
      */
-    public function query_comments($where = '', $whereparams = [], $order = false, $limit = false) {
+    public function query_comments($where = '', $whereparams = [], $limit = false) {
         global $DB;
         $basicwhere = 'questionid = ?';
         $where = !$where ? $basicwhere : $basicwhere . ' ' . $where;
         $whereparams = array_merge([$this->question->id], $whereparams);
-        // Set order.
-        if ($order === false) {
-            $order = $this->order;
-        }
+
         // Set limit.
-        if (!$limit || !is_numeric($limit) || $limit == self::SHOW_ALL) {
-            $limit = '';
-        } else {
-            $limit = 'LIMIT ' . $limit;
+        if (is_numeric($limit) && $limit > 0) {
+            $this->currentlimit = $limit;
         }
+        $limit = $this->currentlimit ? 'LIMIT ' . $this->currentlimit : '';
+
+        // Set order.
+        $order = $this->basicorder;
+        // If have limit, get latest.
+        if ($this->currentlimit > 0) {
+            $order = 'created DESC';
+        }
+
         $query = "
         WITH
         root AS
         (
-            SELECT * 
-            FROM {studentquiz_comment} 
-            WHERE
-                $where
-            ORDER BY 
-                $order 
-            $limit
+            SELECT *
+                FROM {studentquiz_comment}
+                WHERE
+                    $where
+                ORDER BY
+                    $order
+                $limit
         )
         (SELECT *, ROW_NUMBER() OVER(ORDER BY created) AS rownumber FROM root)
         UNION
-        (SELECT child.*, ROW_NUMBER() OVER(ORDER BY created) + (SELECT COUNT(*) FROM root) AS rownumber 
-            FROM {studentquiz_comment} AS child 
+        (SELECT child.*, ROW_NUMBER() OVER(ORDER BY created) + (SELECT COUNT(*) FROM root) AS rownumber
+            FROM {studentquiz_comment} AS child
             WHERE child.parentid IN (SELECT id FROM root))
         ORDER BY
             rownumber ASC";
         // Retrieve comments from question.
-        $results = $DB->get_records_sql($query, $whereparams);
-        return $results;
+        return $DB->get_records_sql($query, $whereparams);
     }
 
     /**
@@ -322,12 +308,11 @@ class container {
         if ($record->parentid != self::PARENTID) {
             $parentdata = $DB->get_record_sql($query, [$record->parentid]);
             $this->set_user_list([$record]);
-            $comment = $this->build_comment($record, $parentdata);
-            return $comment;
+            return $this->build_comment($record, $parentdata);
         }
 
         // It's a comment.
-        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id], false);
+        $comments = $this->fetch(1, ' AND parentid = ? AND id = ?', [self::PARENTID, $record->id]);
         if (!isset($comments[0])) {
             throw new \moodle_exception('cannotgetcomment', 'mod_studenquiz');
         }
@@ -348,7 +333,7 @@ class container {
     /**
      * Create new comment.
      *
-     * @param $data - Data of comment will be created.
+     * @param \stdClass $data - Data of comment will be created.
      * @param bool $log - Write log - true will write.
      * @return int - ID of created comment.
      */
@@ -376,11 +361,11 @@ class container {
      * @param $data - data of comment.
      */
     public function log($action, $data) {
-        $cm = $this->get_cm();
+        $coursemodule = $this->get_cm();
         if ($action == self::COMMENT_CREATED) {
-            mod_studentquiz_notify_comment_added($data, $this->get_course(), $cm);
+            mod_studentquiz_notify_comment_added($data, $this->get_course(), $coursemodule);
         } else if ($action == self::COMMENT_DELETED) {
-            mod_studentquiz_notify_comment_deleted($data, $this->get_course(), $cm);
+            mod_studentquiz_notify_comment_deleted($data, $this->get_course(), $coursemodule);
         }
     }
 
@@ -388,8 +373,6 @@ class container {
      * Set users list.
      *
      * @param array $comments
-     * @throws \coding_exception
-     * @throws \dml_exception
      */
     public function set_user_list($comments) {
         global $DB;
@@ -418,7 +401,7 @@ class container {
     /**
      * Get user from users list.
      *
-     * @param $id
+     * @param int $id - Id of user.
      * @return mixed|null
      */
     public function get_user_from_user_list($id) {

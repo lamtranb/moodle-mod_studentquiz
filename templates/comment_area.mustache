@@ -31,8 +31,8 @@
     <div class="studentquiz-comment-postform">
         {{{postform}}}
     </div>
-    <div class="studentquiz-comment-discussion">
-        <div class="studentquiz-comment-discussion-info">
+    <div class="studentquiz-comment-filter">
+        <div class="studentquiz-comment-filter-info">
             <div class="studentquiz-comment-groupselector">{{{groupselector}}}</div>
             <div class="studentquiz-comment-expand-section">
                 <button class="studentquiz-comment-expand" title="{{#str}} expandall, mod_studentquiz {{/str}}">
@@ -42,14 +42,14 @@
                     {{#str}} collapseall, mod_studentquiz {{/str}}
                 </button>
                 <span class="studentquiz-comment-postcount">
-                    {{#postcount}}{{postcount}}{{/postcount}}
+                    {{#commentcountstring}}{{commentcountstring}}{{/commentcountstring}}
                 </span>
             </div>
         </div>
     </div>
-    <div class="studentquiz-comment-replies">{{>mod_studentquiz/comments}}</div>
+    <div class="studentquiz-container-replies">{{>mod_studentquiz/comments}}</div>
     <span class="no-comment">
         {{^comments}}{{#str}} no_comments, mod_studentquiz {{/str}}{{/comments}}
     </span>
-    <span class="studentquiz-comment-loading" style="display: none">{{#pix}} y/loading, core, {{#str}} loading {{/str}} {{/pix}}</span>
+    <span class="studentquiz-comment-loading">{{#pix}} y/loading, core, {{#str}} loading {{/str}} {{/pix}}</span>
 </div>

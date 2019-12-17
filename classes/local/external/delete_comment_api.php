@@ -19,9 +19,7 @@ namespace mod_studentquiz\local\external;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
-use external_multiple_structure;
 use external_value;
-use mod_studentquiz\commentarea\comment;
 use mod_studentquiz\commentarea\container;
 use mod_studentquiz\utils;
 
@@ -31,20 +29,20 @@ require_once($CFG->dirroot . '/mod/studentquiz/locallib.php');
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * Expand comment services implementation.
+ * Delete comment services implementation.
  *
  * @package mod_studentquiz
- * @copyright 2019 The Open University
+ * @copyright 2017 The Open University
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class expand_comment extends external_api {
+class delete_comment_api extends external_api {
 
     /**
      * Gets function parameter metadata.
      *
      * @return external_function_parameters Parameter info
      */
-    public static function expand_comment_parameters() {
+    public static function delete_comment_parameters() {
         return new external_function_parameters([
                 'questionid' => new external_value(PARAM_INT, 'Question ID'),
                 'cmid' => new external_value(PARAM_INT, 'Cm ID'),
@@ -57,45 +55,55 @@ class expand_comment extends external_api {
      *
      * @return external_single_structure
      */
-    public static function expand_comment_returns() {
+    public static function delete_comment_returns() {
         $replystructure = utils::get_comment_area_webservice_comment_reply_structure();
-        $repliesstructure = $replystructure;
-        $repliesstructure['replies'] = new external_multiple_structure(
-                new external_single_structure($replystructure), 'List of replies belong to first level comment'
-        );
-        return new external_single_structure($repliesstructure);
+        return new external_single_structure([
+                'success' => new external_value(PARAM_BOOL, 'Delete comment successfully or not.'),
+                'message' => new external_value(PARAM_TEXT, 'Message in case delete comment failed.'),
+                'data' => new external_single_structure($replystructure, '', VALUE_DEFAULT, null)
+        ]);
     }
 
     /**
-     * Get posts belong to diccussion.
+     * Check permission and delete comment.
      *
-     * @param int $questionid - Question ID
-     * @param int $cmid - CM ID
-     * @param int $commentid - Comment ID
-     * @return mixed
+     * @param int $questionid - Question ID.
+     * @param int $cmid - CM ID.
+     * @param int $commentid - Comment ID which will be edited.
+     * @return \stdClass
      */
-    public static function expand_comment($questionid, $cmid, $commentid) {
+    public static function delete_comment($questionid, $cmid, $commentid) {
 
-        $params = self::validate_parameters(self::expand_comment_parameters(), [
+        // Validate web service's parameters.
+        $params = self::validate_parameters(self::delete_comment_parameters(), array(
                 'questionid' => $questionid,
                 'cmid' => $cmid,
                 'commentid' => $commentid
-        ]);
+        ));
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
         $commentarea = new container($studentquiz, $question, $cm, $context);
 
         $comment = $commentarea->query_comment_by_id($params['commentid']);
 
-        $data = $comment->convert_to_object();
+        $response = new \stdClass();
+        // Check if current user can delete the comment.
+        if ($comment->can_delete()) {
+            // Delete the comment.
+            $comment->delete();
 
-        $data->replies = [];
+            // Get new comment from DB to have correct info.
+            $comment = $commentarea->query_comment_by_id($params['commentid']);
 
-        /** @var comment $reply */
-        foreach ($comment->get_replies() as $reply) {
-            $data->replies[] = $reply->convert_to_object();
+            $response->success = true;
+            $response->message = 'Success';
+            $response->data = $comment->convert_to_object();
+        } else {
+            // User can't delete comment, return reason.
+            $response->success = false;
+            $response->message = $comment->get_describe();
         }
 
-        return $data;
+        return $response;
     }
 }

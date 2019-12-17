@@ -1475,16 +1475,14 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
     }
 
     /**
-     * Generate some HTML to display the complete comment fragment
+     * Generate some HTML to display the complete comment fragment.
      *
-     * @param int $cmid Course module id
-     * @param int $questionid Question id
-     * @param array $comments List of comment
-     * @param int $userid User id
-     * @return string HTML fragment
-     * @throws coding_exception
+     * @param int $cmid - Course module id.
+     * @param int $questionid - Question id.
+     * @param int $userid - User id.
+     * @return string HTML fragment.
      */
-	public function render_comment($cmid, $questionid, $userid) {
+    public function render_comment($cmid, $questionid, $userid) {
         $renderer = $this->page->get_renderer('mod_studentquiz', 'comment');
         return html_writer::div(
                 html_writer::div(
@@ -1492,8 +1490,7 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
                                 $renderer->render_comment_area($questionid, $userid, $cmid),
                                 'comment_list'),
                         'comments'
-                ),
-                'studentquiz_behaviour comment_list_studentquiz_behaviour'
+                ), 'studentquiz_behaviour'
         );
     }
 
@@ -1835,16 +1832,14 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
     public function render_comment_area($questionid, $userid, $cmid) {
         global $COURSE;
 
-        $data = [
-                'id' => 'question_comment_area_' . $questionid
-        ];
+        $id = 'question_comment_area_' . $questionid;
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($questionid, $cmid);
         $commentarea = new container($studentquiz, $question, $cm, $context);
         $comments = $commentarea->fetch_all($commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT);
         $res = [];
         if (count($comments) > 0) {
-            foreach ($comments as $key => $comment) {
+            foreach ($comments as $comment) {
                 /** @var comment $comment */
                 $item = $comment->convert_to_object();
                 $item->replies = [];
@@ -1853,7 +1848,7 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
         }
 
         $jsdata = [
-                'id' => $data['id'],
+                'id' => $id,
                 'courseid' => $COURSE->id,
                 'questionid' => $questionid,
                 'contextid' => $context->id,
@@ -1861,28 +1856,26 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'numbertoshow' => container::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT,
                 'cmid' => $cmid
         ];
-        $mform = new \mod_studentquiz\commentarea\comment_form(null, [
-                'params' => [
-                        'index' => $data['id'],
-                        'replyto' => VALUE_DEFAULT,
-                        'questionid' => $questionid,
-                        'cmid' => $cmid,
-                ],
-                'cancelbutton' => false
-        ]);
-        $data['postform'] = $mform->get_html();
+        $mform = new \mod_studentquiz\commentarea\form\comment_form([
+                'index' => $id,
+                'replyto' => VALUE_DEFAULT,
+                'questionid' => $questionid,
+                'cmid' => $cmid
+        ], false);
 
-        $data['comments'] = $res;
         $count = utils::count_comments_and_replies($res);
         $current = $count['total'];
         $total = $commentarea->get_num_comments();
-        $data['postcount'] = get_string('current_of_total', 'mod_studentquiz', compact('current', 'total'));
 
         // Need to pass this to js to calculate current of total comments.
-        $jsdata = array_merge($jsdata, compact('count','total'));
+        $jsdata = array_merge($jsdata, compact('count', 'total'));
 
-        $this->page->requires->js_call_amd(self::MODNAME . '/comment_initial', 'init', [json_encode($jsdata)]);
-        $output = $this->output->render_from_template(self::MODNAME . '/comment_area', $data);
-        return $output;
+        $this->page->requires->js_call_amd(self::MODNAME . '/comment_area', 'generate', [json_encode($jsdata)]);
+        return $this->output->render_from_template(self::MODNAME . '/comment_area', [
+                'id' => $id,
+                'postform' => $mform->get_html(),
+                'comments' => $res,
+                'commentcountstring' => get_string('current_of_total', 'mod_studentquiz', compact('current', 'total'))
+        ]);
     }
 }

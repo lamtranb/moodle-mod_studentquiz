@@ -231,6 +231,11 @@ $string['privacy:metadata:studentquiz_comment:comment'] = 'Comment of the questi
 $string['privacy:metadata:studentquiz_comment:created'] = 'Time created time comment.';
 $string['privacy:metadata:studentquiz_comment:questionid'] = 'ID of the question.';
 $string['privacy:metadata:studentquiz_comment:userid'] = 'ID of the user.';
+$string['privacy:metadata:studentquiz_comment:parentid'] = 'ID of parent comment. 0: top level comment.';
+$string['privacy:metadata:studentquiz_comment:deleted'] = 'Time deleted time comment.';
+$string['privacy:metadata:studentquiz_comment:deleteuserid'] = 'ID of the user deleted comment.';
+
+
 $string['privacy:metadata:studentquiz_practice'] = 'Store quiz practices.';
 $string['privacy:metadata:studentquiz_practice:quizcoursemodule'] = 'Quiz course module.';
 $string['privacy:metadata:studentquiz_practice:studentquizcoursemodule'] = 'StudentQuiz course module.';
@@ -419,18 +424,14 @@ $string['reportcomment'] = 'Report';
 $string['replycomment'] = 'Reply';
 
 $string['delete'] = 'Delete';
-$string['undelete'] = 'Undelete';
 $string['deletecomment'] = 'Delete comment';
-$string['undeletecomment'] = 'Undelete comment';
 
 $string['reply'] = 'Reply';
 $string['replies'] = 'Replies';
 $string['numberreply'] = '{$a} Replies';
 $string['editorplaceholder'] = 'Enter your response here ...';
 $string['deleteandemail'] = 'Delete and email';
-$string['important_ipud'] = 'Highlighted comment';
 $string['deletedbyauthor'] = 'This comment was deleted by the author on {$a}.';
-$string['deletedbymoderator'] = 'This comment was deleted by a moderator on {$a}.';
 $string['deletedbyuser'] = 'This comment was deleted by {$a->user} on {$a->date}.';
 $string['deletedcomment'] = 'Deleted comment.';
 $string['moderator'] = 'Moderator';
@@ -441,11 +442,9 @@ $string['error_form_validation'] = '{$a}';
 $string['image_placeholder'] = ' [Image] ';
 $string['missingparam'] = 'A required parameter is missing or wrong';
 $string['confirmdeletecomment'] = 'Are you sure you want to delete this comment?';
-$string['confirmundeletecomment'] = 'Are you sure you want to undelete this comment?';
 $string['onlyrootcommentcanreply'] = 'Only first level of comment can be reply';
 
 $string['describe_already_deleted'] = 'This comment is already deleted.';
-$string['describe_not_deleted'] = 'This comment is not deleted.';
 $string['describe_out_of_time_edit'] = 'This comment is out of time to edit';
 $string['describe_not_creator'] = 'This is not your comment.';
 
@@ -453,3 +452,4 @@ $string['message'] = 'Message';
 $string['add_comment'] = 'Add comment';
 $string['add_reply'] = 'Add reply';
 $string['current_of_total'] = '{$a->current} of {$a->total}';
+$string['anonnymous_user_name'] = 'Anonymous User #{$a}';

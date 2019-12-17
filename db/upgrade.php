@@ -550,7 +550,7 @@ function xmldb_studentquiz_upgrade($oldversion) {
     if ($oldversion < 2019113000) {
 
         $table = new xmldb_table('studentquiz_comment');
-        $field = new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '1', null, true, null, 0, 'comment');
+        $field = new xmldb_field('parentid', XMLDB_TYPE_INTEGER, '10', null, true, null, 0, 'comment');
         $index = new xmldb_index('parentidindex', XMLDB_INDEX_NOTUNIQUE, ['parentid']);
         if (!$dbman->field_exists($table, $field)) {
             // Add parentid field.

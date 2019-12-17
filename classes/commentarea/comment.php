@@ -30,12 +30,16 @@ use mod_studentquiz\utils;
  */
 class comment {
 
-    /** @var int */
+    /** @var string - User profile_url */
+    const USER_PROFILE_URL = '/user/view.php';
+
+    /** @var int - Shorten text with maximum length. */
     const SHORTEN_LENGTH = 160;
 
-    /** @var string - Link to page when user press report button. */
-    const ABUSE_PAGE = '/mod/studentquiz/report.php';
+    /** @var string - Allowable tags when shorten text. */
+    const ALLOWABLE_TAGS = '<img>';
 
+    /** @var int - Comment/reply can only be editable within 600 seconds. */
     const EDITABLE_TIME = 600;
 
     /** @var \question_bank - Question. */
@@ -72,7 +76,7 @@ class comment {
     public function __construct(container $container, $data, $parent = null) {
         // Get user data from users list.
         $data->user = $container->get_user_from_user_list($data->userid);
-        $data->deleteuser =  $container->get_user_from_user_list($data->deleteuserid);
+        $data->deleteuser = $container->get_user_from_user_list($data->deleteuserid);
 
         $this->container = $container;
         $this->question = $this->get_container()->get_question();
@@ -179,53 +183,21 @@ class comment {
      * @return bool
      */
     public function can_delete() {
+        $allow = true;
         if ($this->is_deleted()) {
             $this->describe = get_string('describe_already_deleted', 'mod_studentquiz');
-            return false;
-        }
-        if (!$this->is_moderator()) {
+            $allow = false;
+        } else if (!$this->is_moderator()) {
             if ($this->data->userid != $this->get_logged_in_user()->id) {
                 $this->describe = get_string('describe_not_creator', 'mod_studentquiz');
-                return false;
+                $allow = false;
             }
             if (time() > $this->get_editable_time()) {
                 $this->describe = get_string('describe_out_of_time_edit', 'mod_studentquiz');
-                return false;
+                $allow = false;
             }
         }
-        return true;
-    }
-
-    /**
-     * Undelete permission.
-     *
-     * @return bool
-     */
-    public function can_undelete() {
-        if (!$this->is_deleted()) {
-            $this->describe = get_string('describe_not_deleted', 'mod_studentquiz');
-            return false;
-        }
-        if (!$this->is_moderator()) {
-            if ($this->data->userid != $this->get_logged_in_user()->id) {
-                $this->describe = get_string('describe_not_creator', 'mod_studentquiz');
-                return false;
-            }
-            if (time() > $this->get_editable_time()) {
-                $this->describe = get_string('describe_out_of_time_edit', 'mod_studentquiz');
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Report permission.
-     *
-     * @return bool
-     */
-    public function can_report() {
-        return true;
+        return $allow;
     }
 
     /**
@@ -241,7 +213,7 @@ class comment {
     }
 
     /**
-     * Can reply permission
+     * Can reply permission.
      *
      * @return bool
      */
@@ -336,7 +308,8 @@ class comment {
     /**
      * Get total replies.
      *
-     * @return int
+     * @param bool $includedeleted - Count include deleted comment/reply.
+     * @return int - Number of replies.
      */
     public function get_total_replies($includedeleted = true) {
         $replies = $this->get_replies();
@@ -353,6 +326,11 @@ class comment {
         return $count;
     }
 
+    /**
+     * Check if current comment is root comment or reply.
+     *
+     * @return bool
+     */
     public function is_root_comment() {
         return $this->data->parentid == $this->get_container()::PARENTID;
     }
@@ -363,73 +341,62 @@ class comment {
      * @return \stdClass
      */
     public function convert_to_object() {
-        $config = $this->get_container()->get_config();
         $comment = $this->data;
-        $data = new \stdClass();
-        $data->id = $comment->id;
-        $data->questionid = $comment->questionid;
-        $data->parentid = $comment->parentid;
-        $data->content = $comment->comment;
-        $data->shortcontent = utils::nice_shorten_text(strip_tags($comment->comment, '<img>'), self::SHORTEN_LENGTH);
-        $data->numberofreply = $this->get_total_replies(false);
-        $data->plural = $data->numberofreply == 0 || $data->numberofreply > 1;
-        $data->candelete = $this->can_delete();
-        $data->canreport = $this->can_report();
-        $data->canundelete = $this->can_undelete();
-        $data->canviewdeleted = $this->can_view_deleted();
-        $data->canreply = $this->can_reply();
-        $data->deleteuser = new \stdClass();
-        $data->deleted = $this->is_deleted();
-        $data->deletedtime = $this->get_deleted_time();
-        $data->iscreator = $this->is_creator();
+        $object = new \stdClass();
+        $object->id = $comment->id;
+        $object->questionid = $comment->questionid;
+        $object->parentid = $comment->parentid;
+        $object->content = $comment->comment;
+        $object->shortcontent = utils::nice_shorten_text(strip_tags($comment->comment, self::ALLOWABLE_TAGS), self::SHORTEN_LENGTH);
+        $object->numberofreply = $this->get_total_replies(false);
+        $object->plural = $object->numberofreply == 0 || $object->numberofreply > 1;
+        $object->candelete = $this->can_delete();
+        $object->canviewdeleted = $this->can_view_deleted();
+        $object->canreply = $this->can_reply();
+        $object->deleteuser = new \stdClass();
+        $object->deleted = $this->is_deleted();
+        $object->deletedtime = $this->get_deleted_time();
+        $object->iscreator = $this->is_creator();
         // Row number is use as username 'Anonymous Student #' see line 412.
-        $data->rownumber = isset($comment->rownumber) ? $comment->rownumber : $comment->id;
-        $data->ispost = $this->is_root_comment();
+        $object->rownumber = isset($comment->rownumber) ? $comment->rownumber : $comment->id;
+        $object->root = $this->is_root_comment();
         // Check is this comment is deleted and user permission to view deleted comment.
-        if ($this->is_deleted() && !$data->canviewdeleted) {
+        if ($this->is_deleted() && !$object->canviewdeleted) {
             // If this comment is deleted and user don't have permission to view then we hide following information.
-            $data->title = '';
-            $data->authorname = '';
-            $data->authorid = -1;
-            $data->authorprofile = '';
-            $data->posttime = '';
-            $data->deleteuser->id = 0;
-            $data->deleteuser->firstname = '';
-            $data->deleteuser->lastname = '';
-            $data->deleteuser->profileurl = '';
+            $object->title = '';
+            $object->authorname = '';
+            $object->authorid = -1;
+            $object->authorprofile = '';
+            $object->posttime = '';
+            $object->deleteuser->id = 0;
+            $object->deleteuser->firstname = '';
+            $object->deleteuser->lastname = '';
+            $object->deleteuser->profileurl = '';
         } else {
             if ($this->can_view_username()) {
-                $data->authorname = $this->get_user()->fullname;
-                $data->authorid = $comment->userid;
-                $data->authorprofile = $config->wwwroot . '/user/view.php?id=' . $comment->userid;
+                $object->authorname = $this->get_user()->fullname;
+                $object->authorid = $comment->userid;
+                $object->authorprofile = $this->get_user_profile_url($comment->userid);
             } else {
-                $data->authorname = 'Anonymous Student #' . $data->rownumber;
-                $data->authorid = -1;
-                $data->authorprofile = '';
+                $object->authorname = get_string('anonnymous_user_name', 'mod_studentquiz', $object->rownumber);
+                $object->authorid = -1;
+                $object->authorprofile = '';
             }
-            $data->posttime = userdate($this->get_created(), $this->timeformat);
-
+            $object->posttime = userdate($this->get_created(), $this->timeformat);
             if ($this->is_deleted()) {
                 $deleteuser = $this->get_delete_user();
-                $data->deleteuser->id = $deleteuser->id;
-                $data->deleteuser->firstname = $deleteuser->firstname;
-                $data->deleteuser->lastname = $deleteuser->lastname;
-                $data->deleteuser->profileurl = (new \moodle_url('/user/view.php', [
-                        'id' => $deleteuser->id
-                ]))->out();
-            }
-            else {
-                $data->deleteuser->id = 0;
-                $data->deleteuser->firstname = '';
-                $data->deleteuser->lastname = '';
-                $data->deleteuser->profileurl = '';
+                $object->deleteuser->id = $deleteuser->id;
+                $object->deleteuser->firstname = $deleteuser->firstname;
+                $object->deleteuser->lastname = $deleteuser->lastname;
+                $object->deleteuser->profileurl = $this->get_user_profile_url($deleteuser->id);
+            } else {
+                $object->deleteuser->id = 0;
+                $object->deleteuser->firstname = '';
+                $object->deleteuser->lastname = '';
+                $object->deleteuser->profileurl = '';
             }
         }
-        // Add report link if report enabled.
-        if ($data->canreport) {
-            $data->reportlink = $this->get_abuse_link($data->id);
-        }
-        return $data;
+        return $object;
     }
 
     /**
@@ -439,35 +406,28 @@ class comment {
      * @return int;
      */
     public function delete($log = false) {
-        global $DB, $USER;
+        global $DB;
         $transaction = $DB->start_delegated_transaction();
         $data = new \stdClass();
         $data->id = $this->data->id;
         $data->deleted = time();
-        $data->deleteuserid = $USER->id;
+        $data->deleteuserid = $this->get_container()->get_user()->id;
         $id = $DB->update_record('studentquiz_comment', $data);
         if ($log) {
             $container = $this->get_container();
-            $container->log($container::COMMENT_DELETED, $data);
+            $this->get_container()->log($container::COMMENT_DELETED, $data);
         }
         $transaction->allow_commit();
         return $id;
     }
 
     /**
-     * Generate report link.
+     * Get user profile url.
      *
-     * @param int $commentid
+     * @param $id
      * @return string
-     * @throws \moodle_exception
      */
-    public function get_abuse_link($commentid) {
-        $config = $this->get_container()->get_config();
-        $questiondata = $this->get_container()->get_question();
-        return (new \moodle_url($config->wwwroot . self::ABUSE_PAGE, [
-                'cmid' => $this->get_container()->get_cmid(),
-                'questionid' => $questiondata->id,
-                'commentid' => $commentid
-        ]))->out();
+    public function get_user_profile_url($id) {
+        return (new \moodle_url(self::USER_PROFILE_URL, compact('id')))->out();
     }
 }

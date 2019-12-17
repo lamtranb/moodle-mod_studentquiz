@@ -20,8 +20,8 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
-use mod_studentquiz\commentarea\comment_form;
 use mod_studentquiz\commentarea\container;
+use mod_studentquiz\commentarea\form\validate_comment_form;
 use mod_studentquiz\utils;
 
 defined('MOODLE_INTERNAL') || die();
@@ -36,7 +36,7 @@ require_once($CFG->libdir . '/externallib.php');
  * @copyright 2019 The Open University
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class create_comment extends external_api {
+class create_comment_api extends external_api {
 
     /**
      * Gets function parameter metadata.
@@ -75,7 +75,7 @@ class create_comment extends external_api {
      * @return \stdClass
      */
     public static function create_comment($questionid, $cmid, $replyto, $message) {
-
+        global $PAGE;
         $params = self::validate_parameters(self::create_comment_parameters(), [
                 'questionid' => $questionid,
                 'cmid' => $cmid,
@@ -86,29 +86,28 @@ class create_comment extends external_api {
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
         $commentarea = new container($studentquiz, $question, $cm, $context);
 
-        if ($params['replyto'] != 0) {
+        if ($params['replyto'] != container::PARENTID) {
             $replytocomment = $commentarea->query_comment_by_id($params['replyto']);
             if (!$replytocomment->can_reply()) {
-                throw  new \moodle_exception($replytocomment->get_describe());
+                throw new \moodle_exception($replytocomment->get_describe());
             }
         }
 
-        global $PAGE;
         $PAGE->set_context($context);
 
+        // Assign data to edit post form, this will also check for session key.
         $formdata = [
                 'message' => $message,
-                '_qf__mod_studentquiz_commentarea_comment_form' => 1
+                '_qf__mod_studentquiz_commentarea_form_validate_comment_form' => 1
         ];
 
-        // Assign data to edit post form, this will also check for session key.
-        $mform = new comment_form('', array(
+        $mform = new validate_comment_form('', [
                 'params' => [
                         'questionid' => $params['questionid'],
                         'cmid' => $params['cmid'],
                         'replyto' => $params['replyto'],
                 ]
-        ), 'post', '', null, true, $formdata);
+        ], 'post', '', null, true, $formdata);
 
         // Validate form data.
         $validatedata = $mform->get_data();
@@ -121,8 +120,6 @@ class create_comment extends external_api {
         // Create comment.
         $id = $commentarea->create_comment($validatedata);
         $comment = $commentarea->query_comment_by_id($id);
-        $data = $comment->convert_to_object();
-
-        return $data;
+        return $comment->convert_to_object();
     }
 }

@@ -36,7 +36,7 @@ $functions = [
         ],
         // Get comments from a question.
         'mod_studentquiz_get_comments' => [
-                'classname'   => 'mod_studentquiz\local\external\get_comments',
+                'classname'   => 'mod_studentquiz\local\external\get_comments_api',
                 'methodname'  => 'get_comments',
                 'description' => 'Get comments belong to question',
                 'type'        => 'read',
@@ -44,7 +44,7 @@ $functions = [
         ],
         // Expand comment and show all replies.
         'mod_studentquiz_expand_comment' => [
-                'classname'   => 'mod_studentquiz\local\external\expand_comment',
+                'classname'   => 'mod_studentquiz\local\external\expand_comment_api',
                 'methodname'  => 'expand_comment',
                 'description' => 'Expand comment and show all replies',
                 'type'        => 'read',
@@ -52,7 +52,7 @@ $functions = [
         ],
         // Create comment.
         'mod_studentquiz_create_comment' => [
-                'classname'   => 'mod_studentquiz\local\external\create_comment',
+                'classname'   => 'mod_studentquiz\local\external\create_comment_api',
                 'methodname'  => 'create_comment',
                 'description' => 'Create comment',
                 'type'        => 'write',
@@ -60,7 +60,7 @@ $functions = [
         ],
         // Delete comment.
         'mod_studentquiz_delete_comment' => [
-                'classname'   => 'mod_studentquiz\local\external\delete_comment',
+                'classname'   => 'mod_studentquiz\local\external\delete_comment_api',
                 'methodname'  => 'delete_comment',
                 'description' => 'Delete comment',
                 'type'        => 'write',
@@ -74,9 +74,7 @@ $services = [
                         'mod_studentquiz_set_state',
                         'mod_studentquiz_get_comments',
                         'mod_studentquiz_expand_comment',
-                        'mod_studentquiz_delete_comment',
-                        'mod_studentquiz_undelete_comment',
-                        'mod_studentquiz_has_comments'
+                        'mod_studentquiz_delete_comment'
                 ],
                 'requiredcapability' => '',
                 'enabled' => 1,

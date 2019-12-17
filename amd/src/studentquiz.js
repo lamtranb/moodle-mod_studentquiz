@@ -23,8 +23,13 @@
 
 /* jshint latedef:nofunc */
 
-define(['jquery', 'core/ajax'], function($, Ajax) {
+define(['jquery'], function($) {
     var t = {
+        HAS_COMMENTS: {
+                SELECTOR: '.studentquiz-container-replies > div.studentquiz-comment-item',
+                CLASS_CHECK: 'fromcreator'
+        },
+
         initialise: function(forcerating, forcecommenting) {
             var commentErrorsSelector = '.studentquiz_behaviour > .comments .comment_error';
 
@@ -51,7 +56,7 @@ define(['jquery', 'core/ajax'], function($, Ajax) {
                     }).is(':disabled');
                 if (afterquestion) {
                     var hasrated = $('.rating span').hasClass('star');
-                    var hascommented = $('.studentquiz-comment-replies > div.studentquiz-comment-post').hasClass('fromcreator');
+                    var hascommented = $(t.HAS_COMMENTS.SELECTOR).hasClass(t.HAS_COMMENTS.CLASS_CHECK);
                     if (forcerating) {
                         if (!hasrated) {
                             $('.studentquiz_behaviour > .rate > .rate_error').removeClass('hide');

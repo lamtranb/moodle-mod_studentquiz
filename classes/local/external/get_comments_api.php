@@ -19,7 +19,9 @@ namespace mod_studentquiz\local\external;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
+use external_multiple_structure;
 use external_value;
+use mod_studentquiz\commentarea\comment;
 use mod_studentquiz\commentarea\container;
 use mod_studentquiz\utils;
 
@@ -29,24 +31,25 @@ require_once($CFG->dirroot . '/mod/studentquiz/locallib.php');
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * Delete comment services implementation.
+ * Get comments services implementation.
  *
  * @package mod_studentquiz
- * @copyright 2017 The Open University
+ * @copyright 2019 The Open University
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class delete_comment extends external_api {
+class get_comments_api extends external_api {
 
     /**
      * Gets function parameter metadata.
      *
      * @return external_function_parameters Parameter info
      */
-    public static function delete_comment_parameters() {
+    public static function get_comments_parameters() {
         return new external_function_parameters([
                 'questionid' => new external_value(PARAM_INT, 'Question ID'),
                 'cmid' => new external_value(PARAM_INT, 'Cm ID'),
-                'commentid' => new external_value(PARAM_INT, 'Comment ID'),
+                'numbertoshow' => new external_value(PARAM_INT, 'Number of comments to show, 0 will return all comments/replies',
+                        VALUE_DEFAULT, container::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT),
         ]);
     }
 
@@ -55,56 +58,60 @@ class delete_comment extends external_api {
      *
      * @return external_single_structure
      */
-    public static function delete_comment_returns() {
+    public static function get_comments_returns() {
+
         $replystructure = utils::get_comment_area_webservice_comment_reply_structure();
 
+        $repliesstructure = $replystructure;
+        $repliesstructure['replies'] = new external_multiple_structure(
+                new external_single_structure($replystructure), 'List of replies belong to first level comment'
+        );
+
         return new external_single_structure([
-                'success' => new external_value(PARAM_BOOL, 'Delete comment successfully or not.'),
-                'message' => new external_value(PARAM_TEXT, 'Message in case delete comment failed.'),
-                'postinfo' => new external_single_structure($replystructure, '', VALUE_DEFAULT, null)
+                'total' => new external_value(PARAM_INT, 'Total comments belong to this question'),
+                'data' => new external_multiple_structure(new external_single_structure($repliesstructure), 'comments array')
         ]);
     }
 
     /**
-     * Check permission and delete comment.
+     * Get comments belong to question.
      *
      * @param int $questionid - Question ID.
      * @param int $cmid - CM ID.
-     * @param int $commentid - Comment ID which will be edited.
-     * @return \stdClass
+     * @param int $numbertoshow - Number comments to show.
+     * @return array
      */
-    public static function delete_comment($questionid, $cmid, $commentid) {
+    public static function get_comments($questionid, $cmid, $numbertoshow) {
 
-        // Validate web service's parammeters.
-        $params = self::validate_parameters(self::delete_comment_parameters(), array(
+        $params = self::validate_parameters(self::get_comments_parameters(), [
                 'questionid' => $questionid,
                 'cmid' => $cmid,
-                'commentid' => $commentid
-        ));
+                'numbertoshow' => $numbertoshow
+        ]);
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($params['questionid'], $params['cmid']);
+
         $commentarea = new container($studentquiz, $question, $cm, $context);
+        $comments = $commentarea->fetch_all($numbertoshow);
 
-        $comment = $commentarea->query_comment_by_id($params['commentid']);
+        $data = [];
 
-        $response = new \stdClass();
-        // Check if current user can delete the comment.
-        if ($comment->can_delete()) {
-            // Delete the comment.
-            $comment->delete();
-
-            // Get new comment from DB to have correct info.
-            $comment = $commentarea->query_comment_by_id($params['commentid']);
-
-            $response->success = true;
-            $response->message = 'Success';
-            $response->postinfo = $comment->convert_to_object();
-        } else {
-            // User can't delete comment, return reason.
-            $response->success = false;
-            $response->message = $comment->get_describe();
+        /** @var comment $comment */
+        foreach ($comments as $comment) {
+            $item = $comment->convert_to_object();
+            $item->replies = [];
+            if ($numbertoshow == 0) {
+                /** @var comment $reply */
+                foreach ($comment->get_replies() as $reply) {
+                    $item->replies[] = $reply->convert_to_object();
+                }
+            }
+            $data[] = $item;
         }
 
-        return $response;
+        return [
+                'total' => $commentarea->get_num_comments(),
+                'data' => $data
+        ];
     }
 }

@@ -25,16 +25,16 @@
     Data attributes required for JS:
     * none
 }}
-<div class="studentquiz-comment-post {{#iscreator}}fromcreator{{/iscreator}}" id="post{{id}}" data-id="{{id}}">
+<div class="studentquiz-comment-item {{#iscreator}}fromcreator{{/iscreator}}" id="comment_{{id}}" data-id="{{id}}">
     <span id="c{{id}}" data-deleted="{{ deleted }}" data-numberofreply="{{numberofreply}}" data-authorid="{{authorid}}"></span>
     {{#deleted}}
         {{#canviewdeleted}}
-            <div class="studentquiz-comment-post-outerbox">
+            <div class="studentquiz-comment-item-outerbox">
                 <div class="studentquiz-comment-author">
                     <span class="studentquiz-comment-postdate">{{posttime}}</span>
                     <span> | </span>
                     <a class="studentquiz-comment-author-profile" href="{{authorprofile}}">{{authorname}}</a>
-                    {{#ispost}}
+                    {{#root}}
                         {{#expanded}}
                             <a class="studentquiz-comment-collapselink" href="#" title="{{#str}} collapsecomment, mod_studentquiz {{/str}}">
                                 {{#pix}}switch_minus, mod_studentquiz, {{#str}} collapsecomment, mod_studentquiz {{/str}}{{/pix}}
@@ -48,7 +48,7 @@
                                 {{#pix}}switch_plus, mod_studentquiz, {{#str}} expandcomment, mod_studentquiz {{/str}}{{/pix}}
                             </a>
                         {{/expanded}}
-                    {{/ispost}}
+                    {{/root}}
                 </div>
                 <div class="studentquiz-comment-text-deleted">
                     <div class="studentquiz-comment-delete-info">
@@ -71,7 +71,7 @@
                 </div>
                 <div class="studentquiz-comment-postfooter">
                     <div class="studentquiz-comment-commands-box">
-                        {{#ispost}}
+                        {{#root}}
                             <div class="studentquiz-comment-totalreply">
                                 <span class="studentquiz-comment-count-number">
                                     {{numberofreply}}
@@ -85,7 +85,7 @@
                                     {{/plural}}
                                 </span>
                             </div>
-                        {{/ispost}}
+                        {{/root}}
                     </div>
                 </div>
                 <div class="studentquiz-comment-endpost"></div>
@@ -93,7 +93,7 @@
         {{/canviewdeleted}}
         {{^canviewdeleted}}
             <div class="studentquiz-comment-delete-message">
-                {{#ispost}}
+                {{#root}}
                     {{#expanded}}
                         <a class="studentquiz-comment-collapselink" href="#" title="{{#str}} collapsecomment, mod_studentquiz {{/str}}">
                             {{#pix}}switch_minus, mod_studentquiz, {{#str}} collapsecomment, mod_studentquiz {{/str}}{{/pix}}
@@ -108,19 +108,19 @@
                             {{#pix}}switch_plus, mod_studentquiz, {{#str}} expandcomment, mod_studentquiz {{/str}}{{/pix}}
                         </a>
                     {{/expanded}}
-                {{/ispost}}
+                {{/root}}
                 <strong>{{#str}} deletedcomment, mod_studentquiz{{/str}}</strong>
                 {{#str}} deletedbyauthor, mod_studentquiz, {{deletedtime}} {{/str}}
             </div>
         {{/canviewdeleted}}
     {{/deleted}}
     {{^deleted}}
-        <div class="studentquiz-comment-post-outerbox">
+        <div class="studentquiz-comment-item-outerbox">
             <div class="studentquiz-comment-author">
                 <span class="studentquiz-comment-postdate">{{posttime}}</span>
                 <span> | </span>
                 <a class="studentquiz-comment-author-profile" href="{{authorprofile}}">{{authorname}}</a>
-                {{#ispost}}
+                {{#root}}
                     {{#expanded}}
                         <a class="studentquiz-comment-collapselink" href="#" title="{{#str}} collapsecomment, mod_studentquiz {{/str}}">
                             {{#pix}}switch_minus, mod_studentquiz, {{#str}} collapsecomment, mod_studentquiz {{/str}}{{/pix}}
@@ -134,7 +134,7 @@
                             {{#pix}}switch_plus, mod_studentquiz, {{#str}} expandcomment, mod_studentquiz {{/str}}{{/pix}}
                         </a>
                     {{/expanded}}
-                {{/ispost}}
+                {{/root}}
             </div>
             <div class="studentquiz-comment-text">
                 {{#expanded}}
@@ -148,17 +148,7 @@
         </div>
         <div class="studentquiz-comment-postfooter">
             <div class="studentquiz-comment-commands-box">
-                {{#canreport}}
-                    <div class="studentquiz-comment-commands-buttons">
-                        <a href="{{{reportlink}}}" tabindex="-1">
-                            <button class="btn studentquiz-comment-btnreport"
-                                    title="{{#str}} reportcomment, mod_studentquiz, {{index}} {{/str}}">
-                                {{#str}} reportcomment, mod_studentquiz {{/str}}
-                            </button>
-                        </a>
-                    </div>
-                {{/canreport}}
-                {{#ispost}}
+                {{#root}}
                     {{#canreply}}
                         <div class="studentquiz-comment-commands-buttons">
                             <button class="btn studentquiz-comment-btnreply"
@@ -167,25 +157,16 @@
                             </button>
                         </div>
                     {{/canreply}}
-                {{/ispost}}
+                {{/root}}
                 {{#candelete}}
                     <div class="studentquiz-comment-commands-buttons">
-                        <button class="btn studentquiz-comment-btndelete{{^ispost}}reply{{/ispost}}"
+                        <button class="btn studentquiz-comment-btndelete{{^root}}reply{{/root}}"
                                 title="{{#str}} delete, mod_studentquiz {{/str}}">
                             {{#str}} delete, mod_studentquiz {{/str}}
                         </button>
                     </div>
                 {{/candelete}}
-                {{#canedit}}
-                    <div class="studentquiz-comment-commands-buttons">
-                        <a href="#" class="studentquiz-comment-btnedit{{^ispost}}reply{{/ispost}}" role="button"
-                           aria-label="{{#str}} editcomment, mod_studentquiz, {{index}} {{/str}}"
-                           title="{{#str}} editcomment, mod_studentquiz, {{index}} {{/str}}">
-                            {{#pix}} t/editstring, core, {{#str}} editcomment, mod_studentquiz, {{index}} {{/str}} {{/pix}}
-                        </a>
-                    </div>
-                {{/canedit}}
-                {{#ispost}}
+                {{#root}}
                     <div class="studentquiz-comment-totalreply">
                         <span class="studentquiz-comment-count-number">
                             {{numberofreply}}
@@ -199,18 +180,16 @@
                             {{/plural}}
                         </span>
                     </div>
-                {{/ispost}}
+                {{/root}}
             </div>
         </div>
-        <div class="studentquiz-comment-postfragmentform">
-
-        </div>
+        <div class="studentquiz-comment-postfragmentform"></div>
     {{/deleted}}
-    {{#ispost}}
-        <div class="ipud_post-replies">
+    {{#root}}
+        <div class="studentquiz-comment-replies">
             {{#replies}}
                 {{>mod_studentquiz/comment}}
             {{/replies}}
         </div>
-    {{/ispost}}
+    {{/root}}
 </div>

@@ -55,23 +55,20 @@ class utils {
                         'profileurl' => new external_value(PARAM_RAW, 'URL lead to delete user profile page'),
                 ]),
                 'candelete' => new external_value(PARAM_BOOL, 'Can delete this comment or not.'),
-                'canreport' => new external_value(PARAM_BOOL, 'Can report this comment or not.'),
                 'canviewdeleted' => new external_value(PARAM_BOOL, 'Can view deleted comment.'),
                 'canreply' => new external_value(PARAM_BOOL, 'Can reply this comment or not.'),
-                'reportlink' => new external_value(PARAM_RAW, 'Link lead to report page.', VALUE_DEFAULT, ''),
                 'rownumber' => new external_value(PARAM_INT, 'Row number of comment.'),
                 'iscreator' => new external_value(PARAM_BOOL, 'Check if this comment belongs to current logged in user.'),
-                'ispost' => new external_value(PARAM_BOOL, 'Check if is comment or reply.'),
+                'root' => new external_value(PARAM_BOOL, 'Check if is comment or reply.'),
                 'plural' => new external_value(PARAM_BOOL, 'Check if text reply is plural.')
         ];
     }
 
     /**
-     * Truncate text
+     * Truncate text.
      *
-     * @todo Should replace line 156 preg_replace('!\s+!', ' ', $text) => mb_ereg_replace for utf8.
-     * @param $text - Full text
-     * @param int $length - Max length of text
+     * @param $text - Full text.
+     * @param int $length - Max length of text.
      * @return string
      * @throws \coding_exception
      */
@@ -89,7 +86,7 @@ class utils {
     }
 
     /**
-     * Get data need for comment area
+     * Get data need for comment area.
      *
      * @param $questionid
      * @param $cmid
@@ -109,22 +106,18 @@ class utils {
      * @param array $data
      * @return array
      */
-    public static function count_comments_and_replies($data) : array {
-        $postcount = 0;
-        $deletepostcount = 0;
+    public static function count_comments_and_replies(array $data) : array {
+        $commentcount = 0;
+        $deletecommentcount = 0;
         $replycount = 0;
         $deletereplycount = 0;
 
-        if (!is_array($data)) {
-            $data = [$data];
-        }
-
         if (count($data) > 0) {
-            foreach ($data as $k => $v) {
+            foreach ($data as $v) {
                 if ($v->deletedtime === 0) {
-                    $postcount++;
+                    $commentcount++;
                 } else {
-                    $deletepostcount++;
+                    $deletecommentcount++;
                 }
                 if (count($v->replies) > 0) {
                     foreach($v->replies as $reply) {
@@ -138,9 +131,9 @@ class utils {
             }
         }
 
-        return array_merge(compact('postcount', 'deletepostcount', 'replycount', 'deletereplycount'), [
-                'total' => $postcount + $replycount,
-                'totaldelete' => $deletepostcount + $deletereplycount
+        return array_merge(compact('commentcount', 'deletecommentcount', 'replycount', 'deletereplycount'), [
+                'total' => $commentcount + $replycount,
+                'totaldelete' => $deletecommentcount + $deletereplycount
         ]);
     }
 }
