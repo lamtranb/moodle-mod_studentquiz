@@ -1480,14 +1480,16 @@ class mod_studentquiz_attempt_renderer extends mod_studentquiz_renderer {
      * @param int $cmid - Course module id.
      * @param int $questionid - Question id.
      * @param int $userid - User id.
+     * @param string $referer - Previous url.
+     * @param int $highlight - Highlight comment ID.
      * @return string HTML fragment.
      */
-    public function render_comment($cmid, $questionid, $userid) {
+    public function render_comment($cmid, $questionid, $userid, $referer = '', $highlight = 0) {
         $renderer = $this->page->get_renderer('mod_studentquiz', 'comment');
         return html_writer::div(
                 html_writer::div(
                         html_writer::div(
-                                $renderer->render_comment_area($questionid, $userid, $cmid),
+                                $renderer->render_comment_area($questionid, $userid, $cmid, $referer, $highlight),
                                 'comment_list'),
                         'comments'
                 ), 'studentquiz_behaviour'
@@ -1827,22 +1829,50 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
      * @param int $questionid, question id
      * @param int $userid, viewing user id
      * @param int $cmid, course module id
+     * @param string $referer - Referer url.
+     * @param int $highlight - Highlight comment ID.
      * @return string HTML fragment
      */
-    public function render_comment_area($questionid, $userid, $cmid) {
+    public function render_comment_area($questionid, $userid, $cmid, $referer = '', $highlight = 0) {
         global $COURSE;
 
         $id = 'question_comment_area_' . $questionid;
 
         list($question, $cm, $context, $studentquiz) = utils::get_data_for_comment_area($questionid, $cmid);
         $commentarea = new container($studentquiz, $question, $cm, $context);
-        $comments = $commentarea->fetch_all($commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT);
+        $numbertoshow = $commentarea::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT;
+
+        if ($highlight != 0) {
+            $numbertoshow = 0;
+        }
+
+        $isexpand = $numbertoshow === 0;
+
+        $comments = $commentarea->fetch_all($numbertoshow);
         $res = [];
         if (count($comments) > 0) {
             foreach ($comments as $comment) {
                 /** @var comment $comment */
                 $item = $comment->convert_to_object();
                 $item->replies = [];
+                if ($numbertoshow == 0) {
+                    $repliesstring = [];
+                    /** @var comment $reply */
+                    foreach ($comment->get_replies() as $reply) {
+                        $replyobject = $reply->convert_to_object();
+                        $repliesstring[] = [
+                                'id'  => $replyobject->id,
+                                'deleted' => $replyobject->deleted,
+                                'expand' =>  true,
+                                'replies' => [],
+                                'root' => false,
+                                'authorid' => $replyobject->authorid
+                        ];
+                        $item->replies[] = $replyobject;
+                        $item->repliesstring = json_encode($repliesstring);
+                    }
+
+                }
                 $res[] = $item;
             }
         }
@@ -1854,18 +1884,23 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'contextid' => $context->id,
                 'userid' => $userid,
                 'numbertoshow' => container::NUMBER_COMMENT_TO_SHOW_BY_DEFAULT,
-                'cmid' => $cmid
+                'cmid' => $cmid,
+                'referer' => $referer,
+                'highlight' => $highlight,
+                'expand' => $isexpand
         ];
         $mform = new \mod_studentquiz\commentarea\form\comment_form([
                 'index' => $id,
                 'replyto' => VALUE_DEFAULT,
                 'questionid' => $questionid,
-                'cmid' => $cmid
+                'cmid' => $cmid,
+                'referer' => $referer
         ], false);
 
         $count = utils::count_comments_and_replies($res);
-        $current = $count['total'];
         $total = $commentarea->get_num_comments();
+        // If expanded, get all total. If not, get current total root comments.
+        $current = $isexpand ? $total : $count['total'];
 
         // Need to pass this to js to calculate current of total comments.
         $jsdata = array_merge($jsdata, compact('count', 'total'));

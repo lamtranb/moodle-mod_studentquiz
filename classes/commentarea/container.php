@@ -18,6 +18,8 @@ namespace mod_studentquiz\commentarea;
 
 defined('MOODLE_INTERNAL') || die();
 
+use mod_studentquiz\utils;
+
 /**
  * Container class for comment area.
  *
@@ -76,6 +78,11 @@ class container {
     private $userlist = [];
 
     /**
+     * @var array - Reporting Emails.
+     */
+    private $reportemails = [];
+
+    /**
      * mod_studentquiz_commentarea_list constructor.
      *
      * @param $studentquiz
@@ -92,6 +99,7 @@ class container {
         $this->storedcomments = null;
         $this->user = clone $USER;
         $this->course = clone $COURSE;
+        $this->reportemails = utils::extract_reporting_emails_from_string($studentquiz->reportingemail);
     }
 
     /**
@@ -409,5 +417,14 @@ class container {
             return null;
         }
         return $this->userlist[$id];
+    }
+
+    /**
+     * Get reporting emails list.
+     *
+     * @return array
+     */
+    public function get_reporting_emails() {
+        return $this->reportemails;
     }
 }

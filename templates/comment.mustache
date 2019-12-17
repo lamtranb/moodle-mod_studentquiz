@@ -148,6 +148,16 @@
         </div>
         <div class="studentquiz-comment-postfooter">
             <div class="studentquiz-comment-commands-box">
+                {{#canreport}}
+                    <div class="studentquiz-comment-commands-buttons">
+                        <a href="{{{reportlink}}}" tabindex="-1">
+                            <button class="btn studentquiz-comment-btnreport"
+                                    title="{{#str}} reportcomment, mod_studentquiz, {{index}} {{/str}}">
+                                {{#str}} reportcomment, mod_studentquiz {{/str}}
+                            </button>
+                        </a>
+                    </div>
+                {{/canreport}}
                 {{#root}}
                     {{#canreply}}
                         <div class="studentquiz-comment-commands-buttons">

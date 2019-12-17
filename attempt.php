@@ -276,7 +276,8 @@ $html .= html_writer::end_tag('form');
 
 // Output the comments.
 if ($hasanswered) {
-    $html .= $output->render_comment($cmid, $question->id, $userid);
+    $referer = urlencode($PAGE->url->out(true));
+    $html .= $output->render_comment($cmid, $question->id, $userid, $referer);
 }
 
 

@@ -100,6 +100,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     lastCurrentCount: 0,
                     lastTotal: 0,
                     expand: false,
+                    referer: null,
+                    highlight: 0,
 
                     /*
                      * Init function.
@@ -129,6 +131,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         };
 
                         self.expand = params.expand || false;
+                        self.referer = params.referer;
 
                         // Get all language string.
                         str.get_strings([
@@ -188,6 +191,19 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             self.btnExpandAll.show();
                         }
                         self.changeWorkingState(false);
+
+                        // Highlight.
+                        var query = window.location.search.substring(1);
+                        var getParams = self.parseQueryString(query);
+                        self.highlight = parseInt(getParams.highlight) || 0;
+                        // End get highlight
+
+                        if (self.highlight !== 0) {
+                            var highlight = $(t.SELECTOR.COMMENT_ID + self.highlight);
+                            console.log(highlight);
+                            highlight.addClass('highlight');
+                            self.scrollToElement(highlight);
+                        }
                     },
 
                     /*
@@ -461,9 +477,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         // Loop comments and replies to get id and bind event for button inside it.
                         var el = self.containerSelector.find(t.SELECTOR.COMMENT_ID + data.id);
                         var i = 0;
-                        for (i; i < data.replies.length; i++) {
-                            var reply = data.replies[i];
-                            self.bindReplyEvent(reply, el);
+                        if (data.root && data.hasOwnProperty('replies')) {
+                            for (i; i < data.replies.length; i++) {
+                                var reply = data.replies[i];
+                                self.bindReplyEvent(reply, el);
+                            }
                         }
                         el.find(t.SELECTOR.BTN_DELETE).click(function(e) {
                             self.bindDeleteEvent(data);
@@ -688,6 +706,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     },
 
                     convertForTemplate: function(data, expanded) {
+                        var self = this;
                         var single = false;
                         if (data.constructor !== Array) {
                             data = [data];
@@ -697,6 +716,16 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         for (i; i < data.length; i++) {
                             var item = data[i];
                             item.expanded = expanded;
+                            if (self.referer) {
+                                item.reportlink =  item.reportlink + '&referer=' + self.referer;
+                            }
+                            var j = 0;
+                            for (j; j < item.replies.length; j++) {
+                                var reply = item.replies[j];
+                                if (self.referer) {
+                                    reply.reportlink =  reply.reportlink + '&referer=' + self.referer;
+                                }
+                            }
                         }
                         return single ? data[0] : data;
                     },
@@ -1135,7 +1164,40 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         setTimeout(function() {
                             clearInterval(interval);
                         }, 5000);
-                    }
+                    },
+
+                    parseQueryString: function (query) {
+                        var vars = query.split("&");
+                        var queryString = {};
+                        for (var i = 0; i < vars.length; i++) {
+                            var pair = vars[i].split("=");
+                            var key = decodeURIComponent(pair[0]);
+                            var value = decodeURIComponent(pair[1]);
+                            // If first entry with this name.
+                            if (typeof queryString[key] === "undefined") {
+                                queryString[key] = decodeURIComponent(value);
+                                // If second entry with this name.
+                            } else if (typeof queryString[key] === "string") {
+                                queryString[key] = [queryString[key], decodeURIComponent(value)];
+                                // If third or later entry with this name.
+                            } else {
+                                queryString[key].push(decodeURIComponent(value));
+                            }
+                        }
+                        return queryString;
+                    },
+
+                    scrollToElement: function(target, speed) {
+                        if (!target.length)
+                        {
+                            return;
+                        }
+                        if (typeof speed === 'undefined') {
+                            speed = 1000;
+                        }
+                        var top = target.offset().top;
+                        $('html,body').animate({scrollTop: top}, speed);
+                    },
                 };
             },
             generate: function(params) {

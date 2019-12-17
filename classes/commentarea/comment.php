@@ -42,6 +42,9 @@ class comment {
     /** @var int - Comment/reply can only be editable within 600 seconds. */
     const EDITABLE_TIME = 600;
 
+    /** @var string - Link to page when user press report button. */
+    const ABUSE_PAGE = '/mod/studentquiz/report.php';
+
     /** @var \question_bank - Question. */
     private $question;
 
@@ -201,6 +204,24 @@ class comment {
     }
 
     /**
+     * Report permission.
+     *
+     * @return bool
+     */
+    public function can_report() {
+        if ($this->is_deleted()) {
+            $this->describe = get_string('describe_already_deleted', 'mod_studentquiz');
+            return false;
+        }
+        // If set report emails and comment is not deleted yet.
+        if (empty($this->get_container()->get_reporting_emails())) {
+            $this->describe = get_string('report_comment_not_available', 'mod_studentquiz');
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * View deleted permission.
      *
      * @return bool
@@ -351,6 +372,7 @@ class comment {
         $object->numberofreply = $this->get_total_replies(false);
         $object->plural = $object->numberofreply == 0 || $object->numberofreply > 1;
         $object->candelete = $this->can_delete();
+        $object->canreport = $this->can_report();
         $object->canviewdeleted = $this->can_view_deleted();
         $object->canreply = $this->can_reply();
         $object->deleteuser = new \stdClass();
@@ -396,6 +418,10 @@ class comment {
                 $object->deleteuser->profileurl = '';
             }
         }
+        // Add report link if report enabled.
+        if ($object->canreport) {
+            $object->reportlink = $this->get_abuse_link($object->id);
+        }
         return $object;
     }
 
@@ -429,5 +455,21 @@ class comment {
      */
     public function get_user_profile_url($id) {
         return (new \moodle_url(self::USER_PROFILE_URL, compact('id')))->out();
+    }
+
+	/**
+     * Generate report link.
+     *
+     * @param int $commentid
+     * @return string
+     * @throws \moodle_exception
+     */
+    public function get_abuse_link($commentid) {
+        $questiondata = $this->get_container()->get_question();
+        return (new \moodle_url(self::ABUSE_PAGE, [
+                'cmid' => $this->get_container()->get_cmid(),
+                'questionid' => $questiondata->id,
+                'commentid' => $commentid
+        ]))->out();
     }
 }
