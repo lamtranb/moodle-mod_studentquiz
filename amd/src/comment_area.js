@@ -38,6 +38,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
             ACTION_EXPAND: 'mod_studentquiz_expand_comment',
             ACTION_DELETE: 'mod_studentquiz_delete_comment',
             ACTION_LOAD_FRAGMENT_FORM: 'mod_studentquiz_load_fragment_form',
+            ACTION_GET_LANG: 'mod_studentquiz_get_lang',
             FRAGMENT_FORM_CALLBACK: 'commentform',
             SELECTOR: {
                 EXPAND_ALL: '.studentquiz-comment-expand',
@@ -72,7 +73,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                 COMMENT_ID: '#comment_',
                 // Is used when server render. We need to collect some stored data attributes to load events.
                 SPAN_COMMENT_ID: '#c',
-                TOTAL_REPLY: '.studentquiz-comment-totalreply'
+                TOTAL_REPLY: '.studentquiz-comment-totalreply',
+                COMMENT_FILTER_ITEM: '.studentquiz-comment-filter-item'
             },
             get: function() {
                 return {
@@ -102,6 +104,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     expand: false,
                     referer: null,
                     highlight: 0,
+                    sortFeature: null,
+                    sortable: [],
 
                     /*
                      * Init function.
@@ -132,8 +136,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                         self.expand = params.expand || false;
                         self.referer = params.referer;
+                        self.sortFeature = params.sortfeature;
+                        self.sortable = params.sortable;
+                        console.log(self.sortable);
 
                         // Get all language string.
+                        M.util.js_pending(t.ACTION_GET_LANG);
                         str.get_strings([
                             {'key': 'required', component: 'core'},
                             {'key': 'deletecomment', component: 'mod_studentquiz'},
@@ -143,7 +151,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             {'key': 'reply', component: 'mod_studentquiz'},
                             {'key': 'replies', component: 'mod_studentquiz'},
                             {'key': 'editorplaceholder', component: 'mod_studentquiz'},
-                            {'key': 'error', component: 'core'}
+                            {'key': 'error', component: 'core'},
                         ]).done(function(s) {
                             self.string = {
                                 required: s[0],
@@ -158,6 +166,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 },
                                 error: s[8]
                             };
+                            M.util.js_complete(t.ACTION_GET_LANG);
                         });
 
                         this.initServerRender();
@@ -200,7 +209,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                         if (self.highlight !== 0) {
                             var highlight = $(t.SELECTOR.COMMENT_ID + self.highlight);
-                            console.log(highlight);
                             highlight.addClass('highlight');
                             self.scrollToElement(highlight);
                         }
@@ -234,6 +242,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 self.updateCommentCount(0, 0);
                             }
                             M.util.js_complete(t.ACTION_GET_ALL);
+                            // Update global expand value.
+                            self.expand = false;
                         });
                     },
 
@@ -274,6 +284,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 self.updateCommentCount(total, response.total);
                                 self.renderComment(response.data, true);
                                 M.util.js_complete(t.ACTION_GET_ALL);
+                                // Update global expand value.
+                                self.expand = true;
                             });
                         });
 
@@ -328,6 +340,37 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             });
                             return true;
                         });
+
+                        $(t.SELECTOR.COMMENT_FILTER_ITEM).on('click', function(e) {
+                            e.preventDefault();
+                            var type = $(this).data('type');
+                            var orderBy = $(this).attr('data-order') === 'desc' ? 'asc' : 'desc';
+
+                            $(this).attr('data-order', orderBy);
+
+                            $(t.SELECTOR.COMMENT_FILTER_ITEM).not(this).each(function(e){
+                                var each = $(this);
+                                each.attr('data-order', 'asc');
+                                each.removeClass('filter-desc');
+                                each.addClass('filter-asc');
+                            });
+
+                            if (orderBy === 'desc') {
+                                $(this).removeClass('filter-asc');
+                                $(this).addClass('filter-desc');
+                            }
+                            else {
+                                $(this).removeClass('filter-desc');
+                                $(this).addClass('filter-asc');
+                            }
+                            var sortType = type + '_' + orderBy;
+                            self.setSort(sortType);
+
+                            if (self.expand) {
+                                self.btnExpandAll.trigger('click');
+                            }
+                            else self.btnCollapseAll.trigger('click');
+                        });
                     },
 
                     /**
@@ -339,7 +382,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     getComments: function(numberToShow, callback) {
                         var self = this;
                         var params = self.getParamsBeforeCallApi({
-                            numbertoshow: numberToShow
+                            numbertoshow: numberToShow,
+                            sort: self.sortFeature
                         });
                         ajax.call([{
                             methodname: t.ACTION_GET_ALL,
@@ -532,6 +576,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.elementSelector.find(t.SELECTOR.BTN_REPLY).prop('disabled', boolean);
                         self.elementSelector.find(t.SELECTOR.BTN_DELETE).prop('disabled', boolean);
                         self.elementSelector.find(t.SELECTOR.BTN_DELETE_REPLY).prop('disabled', boolean);
+                        self.elementSelector.find(t.SELECTOR.COMMENT_FILTER).prop('disabled', boolean);
                         self.elementSelector.find(t.SELECTOR.EXPAND_LINK).css('visibility', visibility);
                         self.elementSelector.find(t.SELECTOR.COLLAPSE_LINK).css('visibility', visibility);
                         if (self.deleteDialog) {
@@ -1198,6 +1243,14 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         var top = target.offset().top;
                         $('html,body').animate({scrollTop: top}, speed);
                     },
+
+                    // Set sort depend on sortable array.
+                    setSort: function(string) {
+                        var self = this;
+                        if( $.inArray(string, self.sortable) !== -1 ) {
+                            self.sortFeature = string;
+                        }
+                    }
                 };
             },
             generate: function(params) {

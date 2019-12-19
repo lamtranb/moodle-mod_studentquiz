@@ -45,18 +45,49 @@ class container {
     /** @var string - Deleted comment event name. */
     const COMMENT_DELETED = 'comment_deleted';
 
-    const SORT_DATE_ASC = 'created_asc';
-    const SORT_DATE_DESC = 'created_desc';
-    const SORT_FIRSTNAME_ASC = 'firstname_asc';
-    const SORT_FIRSTNAME_DESC = 'firstname_desc';
-    const SORT_LASTNAME_ASC = 'lastname_asc';
-    const SORT_LASTNAME_DESC = 'lastname_desc';
+    const SORT_DATE_ASC = 'date_asc';
+    const SORT_DATE_DESC = 'date_desc';
+    const SORT_FIRSTNAME_ASC = 'forename_asc';
+    const SORT_FIRSTNAME_DESC = 'forename_desc';
+    const SORT_LASTNAME_ASC = 'surname_asc';
+    const SORT_LASTNAME_DESC = 'surname_desc';
 
-    const SPECIAL_SORT_FEATURES = [
-            self::SORT_FIRSTNAME_ASC,
-            self::SORT_FIRSTNAME_DESC,
-            self::SORT_LASTNAME_ASC,
-            self::SORT_LASTNAME_DESC
+    const SORT_DATE = 'date';
+    const SORT_FIRSTNAME = 'forename';
+    const SORT_LASTNAME = 'surname';
+
+    /** @var array - Mapping db fields with sort define. */
+    const SORT_DB_FIELDS = [
+            self::SORT_DATE => 'created',
+            self::SORT_FIRSTNAME => 'firstname',
+            self::SORT_LASTNAME => 'lastname',
+    ];
+
+    /** @var array - Default sort. */
+    const SORT_FIELDS = [
+            self::SORT_DATE
+    ];
+
+    /** @var array - Special fields. */
+    const SPECIAL_SORT_FIELDS = [
+            self::SORT_FIRSTNAME,
+            self::SORT_LASTNAME
+    ];
+
+    /** @var array - Per sort field has multiple sort features. */
+    const SORT_FEATURES = [
+            self::SORT_DATE => [
+                    self::SORT_DATE_ASC,
+                    self::SORT_DATE_DESC
+            ],
+            self::SORT_FIRSTNAME => [
+                    self::SORT_FIRSTNAME_ASC,
+                    self::SORT_FIRSTNAME_DESC,
+            ],
+            self::SORT_LASTNAME => [
+                    self::SORT_LASTNAME_ASC,
+                    self::SORT_LASTNAME_DESC,
+            ]
     ];
 
     const USER_PREFERENCE_SORT = 'mod_studentquiz_comment_sort';
@@ -100,6 +131,9 @@ class container {
     /** @var string - Current sort feature */
     private $sortfeature;
 
+    private $sortfield;
+    private $sortby;
+
     /**
      * mod_studentquiz_commentarea_list constructor.
      *
@@ -107,8 +141,9 @@ class container {
      * @param \question_definition $question
      * @param $cm
      * @param $context
+     * @param string $sort - Sort type.
      */
-    public function __construct($studentquiz, \question_definition $question, $cm, $context) {
+    public function __construct($studentquiz, \question_definition $question, $cm, $context, $sort = '') {
         global $USER, $COURSE;
         $this->studentquiz = $studentquiz;
         $this->question = $question;
@@ -118,6 +153,7 @@ class container {
         $this->user = clone $USER;
         $this->course = clone $COURSE;
         $this->reportemails = utils::extract_reporting_emails_from_string($studentquiz->reportingemail);
+        $this->set_sort_user_preference($sort);
         $this->setup_sort();
     }
 
@@ -287,15 +323,27 @@ class container {
         // Build sort order.
         $sort = $this->get_sort();
 
+        $orderwhere = 'c.created ASC';
         $join = '';
+        $joinselect = '';
+        $reverse = '';
+
+        // Note when we get limited comments, we will get the latest comments.
+        if ($limit) {
+            $orderwhere = 'c.created DESC';
+        }
+
         if ($this->is_special_sort()) {
             $join = 'JOIN {user} u ON u.id = c.userid';
+            $sort = $sort . ', '. $orderwhere;
         }
+
         $query = "
         WITH
         root AS
         (
-            SELECT c.*, ROW_NUMBER() OVER(ORDER BY $sort) AS rownumber
+            SELECT c.*, ROW_NUMBER() OVER(ORDER BY $rowsort) AS rownumber FROM (
+                SELECT c.*
                 FROM {studentquiz_comment} c
                 $join
                 WHERE
@@ -303,6 +351,8 @@ class container {
                 ORDER BY
                     $sort
                 $limit
+            ) AS c 
+                $reverse
         )
         (SELECT * FROM root)
         UNION
@@ -463,21 +513,22 @@ class container {
         return $capability;
     }
 
+    public function get_fields() {
+        $fields = self::SORT_FIELDS;
+        // In anonymous mode, those features is not available.
+        if (!$this->anonymous_mode()) {
+            $fields = array_merge($fields, self::SPECIAL_SORT_FIELDS);
+        }
+        return $fields;
+    }
+
     /**
      * Get array of sortable in current context.
      *
      * @return array
      */
-    public function get_sortable_fields() {
-        $sortable = [
-                self::SORT_DATE_ASC,
-                self::SORT_DATE_DESC
-        ];
-        // In anonymous mode, those features is not available.
-        if (!$this->anonymous_mode()) {
-            $sortable = array_merge($sortable, self::SPECIAL_SORT_FEATURES);
-        }
-        return $sortable;
+    public function get_sortable() {
+        return self::extract_sort_features_from_sort_fields($this->get_fields());
     }
 
     /**
@@ -487,62 +538,117 @@ class container {
      * @return bool
      */
     public function is_sortable($field) {
-        return in_array($field, $this->get_sortable_fields());
+        return in_array($field, $this->get_sortable());
     }
 
     /**
      * Set $sortfield and $sortby from user preferences.
      * If not, then create default.
      * If current feature is not available from current context, then return default.
-     *
-     * @throws \coding_exception
      */
     public function setup_sort() {
+        $currentsortfeature = $this->get_sort_from_user_preference();
+        // In case we are in anonymous mode, and current sort is not supported, return default sort.
+        if ($this->anonymous_mode() && !$this->is_sortable($currentsortfeature)) {
+            $currentsortfeature = self::SORT_DATE_ASC;
+        }
+        $this->sortfeature = $currentsortfeature;
+    }
+
+    public function get_sort_from_user_preference() {
         $sort = get_user_preferences(self::USER_PREFERENCE_SORT);
+        // In case db row is not found.
         if (is_null($sort)) {
             set_user_preference(self::USER_PREFERENCE_SORT, self::SORT_DATE_ASC);
             $sort = get_user_preferences(self::USER_PREFERENCE_SORT);
         }
-        // In case we are in anonymous mode, and current sort is not supported, return default sort.
-        if ($this->anonymous_mode() && !$this->is_sortable($sort)) {
-            $sort = self::SORT_DATE_ASC;
-        }
-        $this->sortfeature = $sort;
+        return $sort;
     }
 
     public function is_special_sort() {
-        return in_array($this->sortfeature, self::SPECIAL_SORT_FEATURES);
+        $specialFields = self::SPECIAL_SORT_FIELDS;
+        return in_array($this->sortfeature, self::extract_sort_features_from_sort_fields($specialFields));
+    }
+
+    public static function extract_sort_features_from_sort_fields($fields) {
+        $sortable = [];
+        if (count($fields) > 0) {
+            foreach ($fields as $field) {
+                if (!isset(self::SORT_FEATURES[$field])) {
+                    continue;
+                }
+                $sortdata = self::SORT_FEATURES[$field];
+                $sortable = array_merge($sortable, $sortdata);
+            }
+        }
+        return $sortable;
     }
 
     /**
      * Convert sort feature to database order.
      *
-     * @return string
+     * @return array
      */
     public function extract_user_preference_sort($prefix = '') {
         $sort = explode('_', $this->sortfeature);
-        $sortfield = $sort[0];
+        $sortfield = self::SORT_DB_FIELDS[$sort[0]];
         $sortby = $sort[1];
         // Build into order query. Example: created_at => 'created asc'.
-        $dbsort = $prefix. $sortfield . ' ' . $sortby;
-        return $dbsort;
+        $dbsort = $prefix . $sortfield . ' ' . $sortby;
+        return [$dbsort, $sortfield, $sortby];
     }
 
     /**
-     * This function is to get root rows, if we have limit then it will always get latest rows.
-     * If sort is special, then it will be second priority.
+     * Build query order by.
      *
      * @return string
      */
     public function get_sort() {
-        $sort = 'c.created ASC';
-        // If have limit, get latest.
-        if ($this->currentlimit > 0) {
-            $sort = 'c.created DESC';
-        }
+        $prefix = 'c.';
         if ($this->is_special_sort()) {
-             $sort = $this->extract_user_preference_sort('u.'). ', '. $sort;
+            $prefix = 'u.';
         }
-        return $sort;
+        list($dbsort, $sortfield, $sortby) = $this->extract_user_preference_sort($prefix);
+        $this->sortfield = $sortfield;
+        $this->sortby = $sortby;
+        return $dbsort;
+    }
+
+    /**
+     * Set user preference sort.
+     *
+     * @param $string
+     * @throws \coding_exception
+     */
+    public function set_sort_user_preference($string) {
+        if ($this->is_sortable($string)) {
+            $currentsort = $this->get_sort_from_user_preference();
+            // If current sort is different, then update. Otherwise no need to call DB.
+            if ($string !== $currentsort) {
+                set_user_preference(self::USER_PREFERENCE_SORT, $string);
+            }
+        }
+    }
+
+    public function get_sort_feature() {
+        return $this->sortfeature;
+    }
+
+    public function get_sort_select() {
+        $data = [];
+        foreach ($this->get_fields() as $field) {
+            $type = 'asc';
+            $features = self::SORT_FEATURES[$field];
+            if (in_array($this->sortfeature, $features) && $this->sortby === 'desc') {
+                $type = 'desc';
+            }
+            $data[] = [
+                    'sortkey' => $field,
+                    'sortstring' => \get_string("filter_comment_label_$field", 'studentquiz'),
+                    'orderclass' => $type === 'desc' ? 'filter-desc' : 'filter-asc',
+                    'ordertype' => $type
+            ];
+        }
+        return $data;
     }
 }

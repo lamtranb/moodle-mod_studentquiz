@@ -33,7 +33,16 @@
     </div>
     <div class="studentquiz-comment-filter">
         <div class="studentquiz-comment-filter-info">
-            <div class="studentquiz-comment-groupselector">{{{groupselector}}}</div>
+            <div class="studentquiz-comment-groupselector">
+                <div class="studentquiz-comment-filters">
+                    <span>{{#str}} filter_comment_label_sort_by, mod_studentquiz {{/str}}</span>
+                    {{#sortselect}}
+                        <button class="studentquiz-comment-filter-item {{ orderclass }}" title="{{sortstring}}" data-type="{{sortkey}}" data-order="{{ordertype}}">
+                            {{ sortstring }}
+                        </button>
+                     {{/sortselect}}
+                </div>
+            </div>
             <div class="studentquiz-comment-expand-section">
                 <button class="studentquiz-comment-expand" title="{{#str}} expandall, mod_studentquiz {{/str}}">
                     {{#str}} expandall, mod_studentquiz {{/str}}

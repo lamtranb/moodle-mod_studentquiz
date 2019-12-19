@@ -1933,6 +1933,9 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
             }
         }
 
+        $sortfeature = $commentarea->get_sort_feature();
+        $sortable = $commentarea->get_sortable();
+
         $jsdata = [
                 'id' => $id,
                 'courseid' => $COURSE->id,
@@ -1943,7 +1946,9 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'cmid' => $cmid,
                 'referer' => $referer,
                 'highlight' => $highlight,
-                'expand' => $isexpand
+                'expand' => $isexpand,
+                'sortfeature' => $sortfeature,
+                'sortable' => $sortable
         ];
         $mform = new \mod_studentquiz\commentarea\form\comment_form([
                 'index' => $id,
@@ -1966,7 +1971,10 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'id' => $id,
                 'postform' => $mform->get_html(),
                 'comments' => $res,
-                'commentcountstring' => get_string('current_of_total', 'mod_studentquiz', compact('current', 'total'))
+                'commentcountstring' => get_string('current_of_total', 'mod_studentquiz', compact('current', 'total')),
+                'sortfeature' => $sortfeature,
+                'sortable' => $sortable,
+                'sortselect' => $commentarea->get_sort_select()
         ]);
     }
 }

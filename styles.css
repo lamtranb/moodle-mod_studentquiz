@@ -682,3 +682,35 @@
     margin-left: 54px;
     padding-left: 27px;
 }
+
+.path-mod-studentquiz .studentquiz-comment-filters .studentquiz-comment-filter-item {
+    color: #fff;
+    padding: 5px 36px 5px 10px;
+    border-radius: 3px 3px 0 0;
+    border: none;
+    background-color: #0b55a8;
+    font-size: 1em;
+    margin: 11px 0 0 0;
+    height: 30px;
+    position: relative;
+    background-image: none;
+    cursor: pointer;
+}
+
+.path-mod-studentquiz .studentquiz-comment-container .studentquiz-comment-filters .studentquiz-comment-filter-item.filter-asc::after {
+    content: url([[pix:mod_studentquiz|switch_plus_white]]);
+    position: absolute;
+    right: 10px;
+    top: 7px;
+    width: 16px;
+    display: block;
+}
+
+.path-mod-studentquiz .studentquiz-comment-container .studentquiz-comment-filters .studentquiz-comment-filter-item.filter-desc::after {
+    content: url([[pix:mod_studentquiz|switch_minus_white]]);
+    position: absolute;
+    right: 10px;
+    top: 7px;
+    width: 16px;
+    display: block;
+}

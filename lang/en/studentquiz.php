@@ -494,3 +494,8 @@ $string['error_sendalert'] = 'There was an error sending your report to {$a}.
 Report could not be sent.';
 $string['report_comment_emailappendix'] = 'You are receiving this email because your email address has been
 used on the StudentQuiz for reporting unacceptable comment.';
+
+$string['filter_comment_label_forename'] = 'Forename';
+$string['filter_comment_label_surname'] = 'Surname';
+$string['filter_comment_label_date'] = 'Date';
+$string['filter_comment_label_sort_by'] = 'Sort by:';
