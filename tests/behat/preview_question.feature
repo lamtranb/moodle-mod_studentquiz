@@ -47,9 +47,15 @@ Feature: Preview a question as a student
     And ".star-empty[data-rate='4']" "css_element" should not exist
     And ".star[data-rate='5']" "css_element" should not exist
     And ".star-empty[data-rate='5']" "css_element" should exist
-    When I set the field "Add comment" to "Very good question"
+    When I enter the text "Very good question" into the "Add comment" editor
     And I press "Add comment"
     Then I should see "Very good question"
-    And I should see "Remove"
-    And I click on ".remove_action" "css_element"
-    Then I should see "No comments"
+    # New comment feature, comment is not removed completely but show "Deleted comment".
+    And I should see "Delete" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-commands-box" "css_element"
+    And I should see "1 of 1"
+    # Try to delete comment.
+    When I click on "Delete" "button" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-commands-box" "css_element"
+    And I click on "[title='Delete comment']" "css_element" in the ".modal.show" "css_element"
+    # Check comment is render as deleted and global count updated.
+    Then I should see "Deleted comment" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-item-outerbox" "css_element"
+    And I should see "0 of 0"

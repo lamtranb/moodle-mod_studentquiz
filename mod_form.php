@@ -190,11 +190,22 @@ class mod_studentquiz_mod_form extends moodleform_mod {
         $mform->addHelpButton('forcerating', 'settings_forcerating', 'studentquiz');
         $mform->setDefault('forcerating', get_config('studentquiz', 'forcerating'));
 
+        // Comment sections.
+        $mform->addElement('header', 'sectioncomment', get_string('settings_section_header_comment', 'studentquiz'));
+
         // Field force commenting
         $mform->addElement('checkbox', 'forcecommenting', get_string('settings_forcecommenting', 'studentquiz'));
         $mform->setType('forcecommenting', PARAM_INT);
         $mform->addHelpButton('forcecommenting', 'settings_forcecommenting', 'studentquiz');
         $mform->setDefault('forcecommenting', get_config('studentquiz', 'forcecommenting'));
+
+        // Comment deletion period.
+        $mform->addElement('text', 'commentdeletionperiod', get_string('settings_commentdeletionperiod', 'studentquiz'));
+        $mform->setType('commentdeletionperiod', PARAM_INT);
+        $mform->addRule('commentdeletionperiod',
+                get_string('deletion_period_invalid', 'studentquiz'), 'regex', '/^[0-9]+$/', 'client');
+        $mform->addHelpButton('commentdeletionperiod', 'settings_commentdeletionperiod', 'studentquiz');
+        $mform->setDefault('commentdeletionperiod', get_config('studentquiz', 'commentdeletionperiod'));
 
         // Availability.
         $mform->addElement('header', 'availability', get_string('availability', 'moodle'));
