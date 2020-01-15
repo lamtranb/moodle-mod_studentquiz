@@ -38,6 +38,10 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
             ACTION_EXPAND: 'mod_studentquiz_expand_comment',
             ACTION_DELETE: 'mod_studentquiz_delete_comment',
             ACTION_LOAD_FRAGMENT_FORM: 'mod_studentquiz_load_fragment_form',
+            ACTION_EXPAND_ALL: 'action_expand_all',
+            ACTION_COLLAPSE_ALL: 'action_collapse_all',
+            ACTION_RENDER_COMMENT: 'action_render_comment',
+            ACTION_APPEND_COMMENT: 'action_append_comment',
             FRAGMENT_FORM_CALLBACK: 'commentform',
             SELECTOR: {
                 EXPAND_ALL: '.studentquiz-comment-expand',
@@ -82,7 +86,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     elementSelector: null,
                     btnExpandAll: null,
                     btnCollapseAll: null,
-                    commentReply: null,
+                    addComment: null,
                     containerSelector: null,
                     questionId: null,
                     dialogue: null,
@@ -120,7 +124,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                         self.btnExpandAll = el.find(t.SELECTOR.EXPAND_ALL);
                         self.btnCollapseAll = el.find(t.SELECTOR.COLLAPSE_ALL);
-                        self.commentReply = el.find(t.SELECTOR.SUBMIT_BUTTON);
+                        self.addComment = el.find(t.SELECTOR.SUBMIT_BUTTON);
                         self.containerSelector = el.find(t.SELECTOR.CONTAINER_REPLIES);
                         self.loadingIcon = el.find(t.SELECTOR.LOADING_ICON);
                         self.formSelector = el.find(t.SELECTOR.FORM_SELECTOR);
@@ -178,39 +182,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.changeWorkingState(false);
                     },
 
-                    /*
-                     * Init comment area.
-                     * */
-                    initCommentArea: function() {
-                        var self = this;
-                        self.loadingIcon.show();
-                        self.changeWorkingState(true);
-                        self.containerSelector[0].innerHTML = '';
-                        M.util.js_pending(t.ACTION_GET_ALL);
-                        self.getComments(self.numberToShow).then(function(response) {
-                            // Calculate length to display the post count.
-                            var count = self.countCommentAndReplies(response.data);
-                            var commentCount = count.commentCount;
-                            var deletedComments = count.totalDelete;
-                            // Only show expand button and count if comment existed.
-                            if (commentCount !== 0 || deletedComments !== 0) {
-                                self.btnExpandAll.show();
-                                self.updateCommentCount(commentCount, response.total);
-                                self.renderComment(response.data, false);
-                            } else {
-                                // No comment found hide loading icon.
-                                self.loadingIcon.hide();
-                                self.changeWorkingState(false);
-                                self.updateCommentCount(0, 0);
-                            }
-                            M.util.js_complete(t.ACTION_GET_ALL);
-                            return true;
-                        }).fail(function(err) {
-                            M.util.js_complete(t.ACTION_GET_ALL);
-                            self.showError(err.message);
-                        });
-                    },
-
                     /**
                      * Init comment editor.
                      */
@@ -233,40 +204,67 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     bindEvents: function() {
                         var self = this;
                         // Bind event to "Expand all comments" button.
-                        self.btnExpandAll.click(function() {
+                        self.btnExpandAll.click(function(e) {
+                            e.preventDefault();
+                            M.util.js_pending(t.ACTION_EXPAND_ALL);
+                            self.changeWorkingState(true);
                             // Empty the replies section to append new response.
                             self.containerSelector.empty();
                             // Change button from expand to collapse collapse and disabled button since we don't want user to
                             // press the button when javascript is appending item or ajax is working.
                             self.btnExpandAll.hide();
                             self.btnCollapseAll.show();
-                            self.changeWorkingState(true);
                             self.loadingIcon.show();
-                            M.util.js_pending(t.ACTION_GET_ALL);
                             self.getComments(t.GET_ALL_VALUE).then(function(response) {
                                 // Calculate length to display count.
                                 var count = self.countCommentAndReplies(response.data);
                                 var total = count.total;
                                 self.updateCommentCount(total, response.total);
                                 self.renderComment(response.data, true);
-                                M.util.js_complete(t.ACTION_GET_ALL);
-                                return true;
+                                M.util.js_complete(t.ACTION_EXPAND_ALL);
                             }).fail(function(err) {
-                                M.util.js_complete(t.ACTION_GET_ALL);
+                                M.util.js_complete(t.ACTION_EXPAND_ALL);
                                 self.showError(err.message);
                             });
                         });
 
                         // Bind event to "Collapse all comments" button.
-                        self.btnCollapseAll.click(function() {
+                        self.btnCollapseAll.click(function(e) {
+                            e.preventDefault();
+                            M.util.js_pending(t.ACTION_COLLAPSE_ALL);
+                            self.changeWorkingState(true);
                             self.loadingIcon.show();
                             self.btnCollapseAll.hide();
                             self.btnExpandAll.show();
-                            self.initCommentArea();
+                            self.containerSelector[0].innerHTML = '';
+                            self.getComments(self.numberToShow).then(function(response) {
+                                // Calculate length to display the post count.
+                                var count = self.countCommentAndReplies(response.data);
+                                var commentCount = count.commentCount;
+                                var deletedComments = count.totalDelete;
+                                // Only show expand button and count if comment existed.
+                                if (commentCount !== 0 || deletedComments !== 0) {
+                                    self.btnExpandAll.show();
+                                    self.updateCommentCount(commentCount, response.total);
+                                    self.renderComment(response.data, false);
+                                } else {
+                                    // No comment found hide loading icon.
+                                    self.loadingIcon.hide();
+                                    self.changeWorkingState(false);
+                                    self.updateCommentCount(0, 0);
+                                }
+                                M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                            }).fail(function(err) {
+                                M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                                self.showError(err.message);
+                            });
                         });
 
-                        // Bind event to "Add Reply" button.
-                        self.commentReply.click(function() {
+                        // Bind event to "Add Reply" button (Root comment).
+                        self.addComment.click(function() {
+                            M.util.js_pending(t.ACTION_CREATE);
+                            self.changeWorkingState(true);
+                            self.loadingIcon.show();
                             // Hide error if exists.
                             $(t.SELECTOR.COMMENT_ERROR).hide();
                             // Hide no comment.
@@ -285,8 +283,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 }
                                 return false;
                             }
-                            self.changeWorkingState(true);
-                            self.loadingIcon.show();
                             var params = {
                                 replyto: rootId,
                                 message: {
@@ -307,9 +303,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 // Disable post reply button since content is now empty.
                                 formSelector.find(t.SELECTOR.SUBMIT_BUTTON).addClass('disabled');
                                 self.appendComment(response, self.elementSelector.find(t.SELECTOR.CONTAINER_REPLIES));
+                                M.util.js_complete(t.ACTION_CREATE);
                                 return true;
                             }).fail(function(e) {
                                 self.handleFailWhenCreateComment(e, params);
+                                M.util.js_complete(t.ACTION_CREATE);
                             });
                             return true;
                         });
@@ -448,6 +446,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                      */
                     renderComment: function(comments, expanded) {
                         var self = this;
+                        M.util.js_pending(t.ACTION_RENDER_COMMENT);
                         comments = self.convertForTemplate(comments, expanded);
                         Templates.render(t.TEMPLATE_COMMENTS, {
                             comments: comments
@@ -461,6 +460,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 self.bindCommentEvent(comments[i]);
                             }
                             self.changeWorkingState(false);
+                            M.util.js_complete(t.ACTION_RENDER_COMMENT);
                         });
                         return false;
                     },
@@ -535,7 +535,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             self.deleteDialog.getFooter().find('button[data-action="yes"]').prop('disabled', boolean);
                         }
                         if (boolean) {
-                            self.commentReply.prop('disabled', boolean);
+                            self.addComment.prop('disabled', boolean);
                         } else {
                             if (self.lastFocusElement) {
                                 self.lastFocusElement.focus();
@@ -620,12 +620,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         var self = this;
                         var itemSelector = self.elementSelector.find(t.SELECTOR.COMMENT_ID + item.id);
                         var key = t.ACTION_EXPAND;
+                        M.util.js_pending(key);
+                        self.changeWorkingState(true);
                         // Clone loading icon selector then append into replies section.
                         var loadingIcon = self.loadingIcon.clone().show();
-                        self.changeWorkingState(true);
                         itemSelector.find(t.SELECTOR.COMMENT_REPLIES_CONTAINER).append(loadingIcon);
                         $(self).hide();
-                        M.util.js_pending(key);
                         // Call expand post web service to get replies.
                         self.expandComment(item.id).then(function(response) {
                             var convertedItem = self.convertForTemplate(response, true);
@@ -667,6 +667,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 return true;
                             });
                         }).fail(function(e) {
+                            M.util.js_complete(key);
                             self.showError(e.message);
                         });
                     },
@@ -779,14 +780,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                      */
                     appendComment: function(item, target, isReply) {
                         var self = this;
-
+                        M.util.js_pending(t.ACTION_APPEND_COMMENT);
                         item.root = !isReply;
                         item.expanded = true;
-
                         Templates.render(t.TEMPLATE_COMMENT, item).done(function(html) {
                             var el = $(html);
                             target.append(el);
-
                             if (!self.lastCurrentCount) {
                                 // This is the first reply.
                                 $(t.SELECTOR.COMMENT_FILTER).removeClass(t.SELECTOR.COMMENT_FILTER_HIDE);
@@ -799,15 +798,14 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             } else {
                                 self.updateCommentCount(self.lastCurrentCount + 1, self.lastTotal + 1);
                             }
-
                             if (isReply) {
                                 self.bindReplyEvent(item, el.parent());
                             } else {
                                 self.bindCommentEvent(item);
                             }
-
                             self.loadingIcon.hide();
                             self.changeWorkingState(false);
+                            M.util.js_complete(t.ACTION_APPEND_COMMENT);
                         });
                     },
 
@@ -816,6 +814,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     * */
                     loadFragmentForm: function(fragmentForm, item) {
                         var self = this;
+                        var key = t.ACTION_LOAD_FRAGMENT_FORM;
+                        M.util.js_pending(key);
                         var params = self.getParamsBeforeCallApi({
                             replyto: item.id,
                             cancelbutton: true,
@@ -827,8 +827,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             attoWrap.removeClass('error');
                             attoWrap.find('#id_error_message_5btext_5d').remove();
                         }
-                        var key = t.ACTION_LOAD_FRAGMENT_FORM;
-                        M.util.js_pending(key);
                         fragment.loadFragment(
                             'mod_studentquiz',
                             t.FRAGMENT_FORM_CALLBACK,
@@ -839,8 +837,8 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             // Focus form reply.
                             var textFragmentFormId = '#id_editor_question_' + self.questionId + '_' + item.id + 'editable';
                             fragmentForm.find(textFragmentFormId).focus();
-                            M.util.js_complete(key);
                             self.bindFragmentFormEvent(fragmentForm, item);
+                            M.util.js_complete(key);
                         });
                     },
 
@@ -851,6 +849,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         var self = this;
                         var formFragmentSelector = fragmentForm.find(t.SELECTOR.COMMENT_AREA_FORM);
                         fragmentForm.find(t.SELECTOR.SUBMIT_BUTTON).click(function() {
+                            self.changeWorkingState(true);
                             var data = self.convertFormToJson(formFragmentSelector);
                             // Check message field.
                             if (data['message[text]'].length === 0) {
@@ -859,7 +858,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             var clone = self.loadingIcon.clone().show();
                             clone.appendTo(fragmentForm);
                             formFragmentSelector.hide();
-                            self.changeWorkingState(true);
                             self.createReplyComment(fragmentForm, item, formFragmentSelector, data);
                             return true;
                         });
@@ -906,6 +904,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             return true;
                         }).fail(function(e) {
                             self.handleFailWhenCreateComment(e, params);
+                            M.util.js_complete(t.ACTION_CREATE_REPLY);
                         });
                     },
 

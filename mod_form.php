@@ -200,10 +200,11 @@ class mod_studentquiz_mod_form extends moodleform_mod {
         $mform->setDefault('forcecommenting', get_config('studentquiz', 'forcecommenting'));
 
         // Comment deletion period.
-        $mform->addElement('text', 'commentdeletionperiod', get_string('settings_commentdeletionperiod', 'studentquiz'));
+        $mform->addElement('select', 'commentdeletionperiod',
+                get_string('settings_commentdeletionperiod', 'studentquiz'),
+                \mod_studentquiz\commentarea\container::get_deletion_period_options()
+        );
         $mform->setType('commentdeletionperiod', PARAM_INT);
-        $mform->addRule('commentdeletionperiod',
-                get_string('deletion_period_invalid', 'studentquiz'), 'regex', '/^[0-9]+$/', 'client');
         $mform->addHelpButton('commentdeletionperiod', 'settings_commentdeletionperiod', 'studentquiz');
         $mform->setDefault('commentdeletionperiod', get_config('studentquiz', 'commentdeletionperiod'));
 

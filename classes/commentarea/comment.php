@@ -43,9 +43,6 @@ class comment {
     /** @var string - Allowable tags when shorten text. */
     const ALLOWABLE_TAGS = '<img>';
 
-    /** @var int - Comment/reply deletion period within 10 minutes. */
-    const DELETION_PERIOD = 10;
-
     /** @var \question_bank - Question. */
     private $question;
 

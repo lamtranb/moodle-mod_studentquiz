@@ -88,6 +88,15 @@ class container {
     /** @var bool - Can view deleted. */
     public $canviewdeleted = false;
 
+    /** @var int - Comment/reply deletion period default - 10 minutes. */
+    const DELETION_PERIOD_DEFAULT = 10;
+
+    /** @var int - Comment/reply deletion period min. */
+    const DELETION_PERIOD_MIN = 0;
+
+    /** @var int - Comment/reply deletion period max. */
+    const DELETION_PERIOD_MAX = 60;
+
     /**
      * mod_studentquiz_commentarea_list constructor.
      *
@@ -446,5 +455,14 @@ class container {
      */
     public function can_view_deleted() {
         return $this->canviewdeleted;
+    }
+
+    /**
+     * Get deletion period select list.
+     *
+     * @return array
+     */
+    public static function get_deletion_period_options() {
+        return range(self::DELETION_PERIOD_MIN, self::DELETION_PERIOD_MAX);
     }
 }
