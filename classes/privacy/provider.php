@@ -34,6 +34,7 @@ use \core_privacy\local\request\writer;
 use \core_privacy\local\metadata\collection;
 use \core_privacy\local\request\transform;
 use mod_studentquiz\commentarea\container;
+use mod_studentquiz\utils;
 
 // A polyfill for Moodle 3.3.
 if (interface_exists('\core_privacy\local\request\core_userlist_provider')) {
@@ -489,26 +490,8 @@ class provider implements
                        WHERE questionid {$questionsql}
                              AND userid = :userid", ['userid' => $userid] + $questionparams);
 
-        // Delete comments belong to user within approved context. Also delete all comment's replies.
-        $deletecommentparams = $questionparams + compact('userid');
-        $parentcommentrecords = $DB->get_records_sql("SELECT id
-                                                            FROM {studentquiz_comment}
-                                                           WHERE questionid {$questionsql}
-                                                                 AND userid = :userid
-                                                                 AND parentid = :parentid",
-                $deletecommentparams + ['parentid' => container::PARENTID]);
-        $delcommentparentsql = '';
-        if (!empty($parentcommentrecords)) {
-            $commentlistids = array_column($parentcommentrecords, "id");
-            list($parentcommentsql, $parentcommentparams) = $DB->get_in_or_equal($commentlistids, SQL_PARAMS_NAMED);
-            $deletecommentparams = $deletecommentparams + $parentcommentparams;
-            $delcommentparentsql = "OR parentid {$parentcommentsql}";
-        }
-        $DB->execute("DELETE
-                            FROM {studentquiz_comment}
-                           WHERE questionid {$questionsql}
-                                 AND userid = :userid
-                                 $delcommentparentsql", $deletecommentparams);
+        // Delete comments belong to user within approved context.
+        self::delete_comment_for_user($questionsql, $questionparams, ['userid' => $userid]);
 
         // Delete progress belong to user within approved context.
         $DB->execute("DELETE FROM {studentquiz_progress}
@@ -669,25 +652,8 @@ class provider implements
                        WHERE questionid {$questionsql}
                              AND userid {$userinsql}", $questionparams + $userinparams);
 
-        // Delete comments belong to users. Also delete all comment's replies.
-        $commentparams = $questionparams + $userinparams;
-        $commentparentrecords = $DB->get_records_sql("SELECT id FROM {studentquiz_comment}
-                                        WHERE questionid {$questionsql}
-                                              AND userid {$userinsql}
-                                              AND parentid = :parentid",
-                $commentparams + ['parentid' => container::PARENTID]);
-        $delcommentparentsql = '';
-        if (!empty($commentparentrecords)) {
-            $parentids = array_column($commentparentrecords, 'id');
-            list($parentcommentsql, $parentcommentparams) = $DB->get_in_or_equal($parentids, SQL_PARAMS_NAMED);
-            $delcommentparentsql = "OR parentid {$parentcommentsql}";
-            $commentparams = $commentparams + $parentcommentparams;
-        }
-        $DB->execute("DELETE
-                            FROM {studentquiz_comment}
-                           WHERE questionid {$questionsql}
-                                 AND userid {$userinsql}
-                                 $delcommentparentsql", $commentparams);
+        // Delete comments belong to users.
+        self::delete_comment_for_users($questionsql, $questionparams, $userinsql, $userinparams);
 
         // Delete progress belong to users.
         $DB->execute("DELETE FROM {studentquiz_progress}
@@ -705,5 +671,57 @@ class provider implements
                              AND studentquizid = :studentquizid", [
                         'studentquizid' => $cm->instance
                 ] + $userinparams);
+    }
+
+    /**
+     * Delete comments belong to users.
+     *
+     * @param $questionsql
+     * @param $questionparams
+     * @param $userinsql
+     * @param $userinparamsn
+     */
+    private static function delete_comment_for_users($questionsql, $questionparams, $userinsql, $userinparams) {
+        global $DB;
+        $params = $questionparams + $userinparams + ['parentid' => container::PARENTID];
+        $blankcomment = utils::get_blank_comment();
+        $DB->execute("UPDATE {studentquiz_comment}
+                              SET userid = :guestuserid,
+                                  deleted = :deleted,
+                                  deleteuserid = :deleteuserid,
+                                  comment = :comment
+                            WHERE questionid {$questionsql}
+                                  AND userid {$userinsql}
+                                  AND parentid = :parentid", $params + $blankcomment);
+        $DB->execute("DELETE
+                            FROM {studentquiz_comment}
+                           WHERE questionid {$questionsql}
+                                 AND userid {$userinsql}
+                                 AND parentid != :parentid", $params);
+    }
+
+    /**
+     * Delete comment for specific user.
+     *
+     * @param $questionsql
+     * @param $questionparams
+     */
+    private static function delete_comment_for_user($questionsql, $questionparams, $userparams) {
+        global $DB;
+        $params = $questionparams + $userparams + ['parentid' => container::PARENTID];
+        $blankcomment = utils::get_blank_comment();
+        $DB->execute("UPDATE {studentquiz_comment}
+                              SET userid = :guestuserid,
+                                  deleted = :deleted,
+                                  deleteuserid = :deleteuserid,
+                                  comment = :comment 
+                            WHERE questionid {$questionsql}
+                                  AND userid = :userid
+                                  AND parentid = :parentid", $params + $blankcomment);
+        $DB->execute("DELETE
+                            FROM {studentquiz_comment}
+                           WHERE questionid {$questionsql}
+                                 AND userid = :userid
+                                 AND parentid != :parentid", $params);
     }
 }

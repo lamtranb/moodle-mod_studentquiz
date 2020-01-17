@@ -99,17 +99,13 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     userId: null,
                     string: {},
                     deleteDialog: null,
-                    postToDelete: null,
-                    hasExpanded: false,
-                    // Checked before placeholder is set.
-                    canAddPlaceHolder: true,
+                    deleteTarget: null,
                     numberToShow: 5,
                     cmId: null,
                     countServerData: [],
                     lastCurrentCount: 0,
                     lastTotal: 0,
                     expand: false,
-                    textareaPlaceholder: '',
                     forceCommenting: false,
                     canViewDeleted: false,
                     hasComment: false,
@@ -144,7 +140,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         };
 
                         self.expand = params.expand || false;
-                        self.textareaPlaceholder = self.formSelector.attr('data-textarea-placeholder');
 
                         // Get all language string.
                         self.string = params.strings;
@@ -152,8 +147,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.canViewDeleted = params.canviewdeleted;
 
                         self.initServerRender();
-                        self.initBindEditor();
                         self.bindEvents();
+
+                        // Bind Atto Editor.
+                        $(document).ready(function() {
+                            self.bindEditorEvent(self.formSelector);
+                        });
                     },
 
                     /**
@@ -186,21 +185,6 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     },
 
                     /**
-                     * Init comment editor.
-                     */
-                    initBindEditor: function() {
-                        var self = this;
-                        // Interval to init atto editor, there are time when Atto's Javascript slow to init the editor, so we
-                        // check interval here to make sure the Atto is init before calling our script.
-                        var interval = setInterval(function() {
-                            if (self.formSelector.find(t.SELECTOR.ATTO.CONTENT).length !== 0) {
-                                self.bindEditorEvent(self.formSelector);
-                                clearInterval(interval);
-                            }
-                        }, 500);
-                    },
-
-                    /**
                      * Bind events: "Expand all comments", "Collapse all comments", "Add Reply".
                      */
                     bindEvents: function() {
@@ -224,9 +208,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 self.updateCommentCount(total, response.total);
                                 self.renderComment(response.data, true);
                                 M.util.js_complete(t.ACTION_EXPAND_ALL);
+                                return true;
                             }).fail(function(err) {
                                 M.util.js_complete(t.ACTION_EXPAND_ALL);
                                 self.showError(err.message);
+                                return false;
                             });
                         });
 
@@ -256,9 +242,11 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                     self.updateCommentCount(0, 0);
                                 }
                                 M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                                return true;
                             }).fail(function(err) {
                                 M.util.js_complete(t.ACTION_COLLAPSE_ALL);
                                 self.showError(err.message);
+                                return false;
                             });
                         });
 
@@ -301,7 +289,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                     formSelector.find('#id_editor_question_' + unique + 'editable').empty();
                                 });
                                 var data = self.convertForTemplate(response, true);
-                                // Disable post reply button since content is now empty.
+                                // Disable reply button since content is now empty.
                                 formSelector.find(t.SELECTOR.SUBMIT_BUTTON).addClass('disabled');
                                 self.appendComment(data, self.elementSelector.find(t.SELECTOR.CONTAINER_REPLIES), false);
                                 M.util.js_complete(t.ACTION_CREATE);
@@ -373,21 +361,20 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                             dialogue.title.html(title);
                             dialogue.body.html(body);
                             dialogue.show();
-                        } else {
-                            // This is the first time show the dialog, get the dialog then save it for later.
-                            ModalFactory.create({
-                                type: ModalFactory.types.CANCEL,
-                                title: title,
-                                body: body
-                            }).done(function(modal) {
-                                dialogue = modal;
-                                // Display the dialogue.
-                                dialogue.show();
-                                modal.getRoot().on(ModalEvents.hidden, {}, function() {
-                                    location.reload();
-                                });
-                            });
+                            return;
                         }
+                        ModalFactory.create({
+                            type: ModalFactory.types.CANCEL,
+                            title: title,
+                            body: body
+                        }).done(function(modal) {
+                            dialogue = modal;
+                            // Display the dialogue.
+                            dialogue.show();
+                            dialogue.getRoot().on(ModalEvents.hidden, {}, function() {
+                                location.reload();
+                            });
+                        });
                     },
 
                     /**
@@ -958,7 +945,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     * */
                     bindDeleteEvent: function(data) {
                         var self = this;
-                        self.postToDelete = data;
+                        self.deleteTarget = data;
                         if (self.deleteDialog) {
                             // Use the rendered modal.
                             self.deleteDialog.show();
@@ -991,7 +978,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                     M.util.js_pending(t.ACTION_DELETE);
                                     self.changeWorkingState(true);
                                     // Call web service to delete post.
-                                    self.deleteComment(self.postToDelete.id).then(function(response) {
+                                    self.deleteComment(self.deleteTarget.id).then(function(response) {
                                         if (!response.success) {
                                             self.showError(response.message);
                                             return true;
@@ -1037,7 +1024,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                             commentSelector.replaceWith(el);
                                             el.find(t.SELECTOR.COMMENT_REPLIES_CONTAINER).replaceWith(oldReplies);
 
-                                            if (self.postToDelete.root) {
+                                            if (self.deleteTarget.root) {
                                                 self.bindCommentEvent(data);
                                             } else {
                                                 self.bindReplyEvent(data, el.parent());
@@ -1050,14 +1037,15 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                         return true;
                                     }).fail(function(err) {
                                         self.showError(err.message);
+                                        return false;
                                     });
                                 });
 
                                 // Focus back to delete button when user hide modal.
                                 modal.getRoot().on(ModalEvents.hidden, function() {
-                                    var el = $(t.SELECTOR.COMMENT_ID + self.postToDelete.id);
+                                    var el = $(t.SELECTOR.COMMENT_ID + self.deleteTarget.id);
                                     // Focus on different element base on comment or reply.
-                                    if (self.postToDelete.root) {
+                                    if (self.deleteTarget.root) {
                                         el.find(t.SELECTOR.BTN_DELETE).first().focus();
                                     } else {
                                         el.find(t.SELECTOR.BTN_DELETE_REPLY).first().focus();
@@ -1104,16 +1092,12 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                     bindEditorEvent: function(formSelector) {
                         var self = this;
                         M.util.js_pending('init_editor');
-                        var placeholder = self.textareaPlaceholder;
 
-                        var editorContentWrap = formSelector.find(t.SELECTOR.ATTO.CONTENT_WRAP);
-                        editorContentWrap.attr('data-placeholder', placeholder);
+                        self.triggerAttoNoContent(formSelector);
 
                         formSelector.find(t.SELECTOR.ATTO.TOOLBAR).fadeIn();
 
                         var key = 'text_change_' + Date.now();
-                        var submitBtn = formSelector.find(t.SELECTOR.SUBMIT_BUTTON);
-                        submitBtn.addClass('disabled');
                         var textareaSelector = formSelector.find(t.SELECTOR.TEXTAREA);
 
                         var attoEditableId = textareaSelector.attr('id') + 'editable';
@@ -1124,13 +1108,9 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 if (mutation.type === 'childList') {
                                     M.util.js_pending(key);
                                     if (t.EMPTY_CONTENT.indexOf($('#' + attoEditableId).html()) > -1) {
-                                        submitBtn.addClass('disabled');
-                                        submitBtn.prop('disabled', true);
-                                        editorContentWrap.attr('data-placeholder', placeholder);
+                                        self.triggerAttoNoContent(formSelector);
                                     } else {
-                                        submitBtn.removeClass('disabled');
-                                        submitBtn.prop('disabled', false);
-                                        editorContentWrap.attr('data-placeholder', '');
+                                        self.triggerAttoHasContent(formSelector);
                                     }
                                     M.util.js_complete(key);
                                 }
@@ -1140,7 +1120,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
 
                         M.util.js_complete('init_editor');
 
-                        // Check interval for 5s incase draft content show up.
+                        // Check interval for 5s in case draft content show up.
                         var interval = setInterval(function() {
                             formSelector.find('textarea[id^="id_message"]').trigger('change');
                         }, 350);
@@ -1180,6 +1160,33 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 container.removeClass(hasCommentClass);
                             }
                         }
+                    },
+
+                    /**
+                     * Handle when Atto has content.
+                     *
+                     * @param {jQuery} formSelector
+                     */
+                    triggerAttoHasContent: function(formSelector) {
+                        var editorContentWrap = formSelector.find(t.SELECTOR.ATTO.CONTENT_WRAP);
+                        var submitBtn = formSelector.find(t.SELECTOR.SUBMIT_BUTTON);
+                        submitBtn.removeClass('disabled');
+                        submitBtn.prop('disabled', false);
+                        editorContentWrap.attr('data-placeholder', '');
+                    },
+
+                    /**
+                     * Handle when Atto has no content.
+                     *
+                     * @param {jQuery} formSelector
+                     */
+                    triggerAttoNoContent: function(formSelector) {
+                        var placeholder = this.formSelector.attr('data-textarea-placeholder');
+                        var editorContentWrap = formSelector.find(t.SELECTOR.ATTO.CONTENT_WRAP);
+                        var submitBtn = formSelector.find(t.SELECTOR.SUBMIT_BUTTON);
+                        submitBtn.addClass('disabled');
+                        submitBtn.prop('disabled', true);
+                        editorContentWrap.attr('data-placeholder', placeholder);
                     }
                 };
             },

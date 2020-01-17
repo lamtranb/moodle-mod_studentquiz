@@ -140,4 +140,19 @@ class utils {
                 'totaldelete' => $deletecommentcount + $deletereplycount
         ]);
     }
+
+    /**
+     * Get blank comment for privacy.
+     *
+     * @return array
+     */
+    public static function get_blank_comment() {
+        $guestuserid = guest_user()->id;
+        return [
+                'guestuserid' => $guestuserid,
+                'deleted' => time(),
+                'deleteuserid' => $guestuserid,
+                'comment' => ''
+        ];
+    }
 }
