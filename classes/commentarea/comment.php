@@ -376,7 +376,7 @@ class comment {
                 $object->deleteuser->lastname = '';
             }
         }
-		$object->hascomment = $container->check_has_comment();
+        $object->hascomment = $container->check_has_comment();
         $object->canreport = $this->can_report();
         // Add report link if report enabled.
         $object->reportlink = $object->canreport ? $this->get_abuse_link($object->id) : null;

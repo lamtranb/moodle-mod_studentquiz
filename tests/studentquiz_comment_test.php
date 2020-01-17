@@ -132,7 +132,7 @@ class mod_studentquiz_comment_testcase extends advanced_testcase {
 
         $this->questions = [$q1, $q2];
 
-        $this->commentarea = new \mod_studentquiz\commentarea\container($this->studentquiz, $q1, $this->cm, $this->context, $user);
+        $this->commentarea = new \mod_studentquiz\commentarea\container($this->studentquiz, $q1, $this->cm, $this->context, $this->users[0]);
         $this->rootid = \mod_studentquiz\commentarea\container::PARENTID;
 
         $this->generate_comment_list_for_sort();
@@ -232,7 +232,7 @@ class mod_studentquiz_comment_testcase extends advanced_testcase {
         // Delete time now is > 0 (deleted).
         $this->assertTrue($commentafterdelete->get_comment_data()->deleted > 0);
         // Check correct delete user id.
-        $this->assertEquals($user->id, $commentafterdelete->get_delete_user()->id);
+        $this->assertEquals($this->users[0]->id, $commentafterdelete->get_delete_user()->id);
     }
 
     /**
