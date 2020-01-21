@@ -48,50 +48,42 @@ Feature: Create comment as an user
     When I enter the text "Comment 1" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(1)" "css_element" exists
     And I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Enter "Comment 2"
     When I enter the text "Comment 2" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(2)" "css_element" exists
     And I should see "Comment 2" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     # Enter "Comment 3"
     When I enter the text "Comment 3" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(3)" "css_element" exists
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
     # Enter "Comment 4"
     When I enter the text "Comment 4" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(4)" "css_element" exists
     And I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(4) .studentquiz-comment-text" "css_element"
     # Enter "Comment 5"
     When I enter the text "Comment 5" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(5)" "css_element" exists
     And I should see "Comment 5" in the ".studentquiz-comment-item:nth-child(5) .studentquiz-comment-text" "css_element"
     # Enter "Comment 6"
     When I enter the text "Comment 6" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(6)" "css_element" exists
     And I should see "Comment 6" in the ".studentquiz-comment-item:nth-child(6) .studentquiz-comment-text" "css_element"
     Then I should see "Collapse all comments"
     # Click "Collapse all comments" button, page should render like initial view.
     When I press "Collapse all comments"
     And I wait until the page is ready
-    # Fix travis fails sometime.
-    And I wait "5" seconds
     Then I should see "Expand all comments"
     And I should not see "Collapse all comments"
     And I should see "5 of 6" in the ".studentquiz-comment-postcount" "css_element"
@@ -104,8 +96,6 @@ Feature: Create comment as an user
     # Click "Expand all comments" button, check that all comments and replies is show.
     When I press "Expand all comments"
     And I wait until the page is ready
-    # Fix travis fails sometime.
-    And I wait "5" seconds
     Then I should see "Collapse all comments"
     And I should not see "Expand all comments"
     And I should see "6 of 6" in the ".studentquiz-comment-postcount" "css_element"
@@ -133,8 +123,6 @@ Feature: Create comment as an user
     Then I click on "Preview" "link" in the "Test question to be previewed" "table_row"
     And I switch to "questionpreview" window
     And I wait until the page is ready
-    And I wait "5" seconds
-    # We only show max 5 latest comments.
     Then I should not see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 2" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
@@ -156,20 +144,15 @@ Feature: Create comment as an user
     When I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    # Ensure travis won't fall.
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(1)" "css_element" exists
     Then I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Check can reply
     When I click on "Reply" "button" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-commands-buttons" "css_element"
     # Wait for reply init.
     And I wait until the page is ready
-    And I wait "5" seconds
     And I enter the text "Reply comment 1" into the "Add reply" editor
     And I press "Add reply"
     And I wait until the page is ready
-    # Ensure travis won't fall.
-    And I wait "5" seconds
     Then I should see "1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-totalreply" "css_element"
     And I should see "Reply" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-totalreply" "css_element"
 
@@ -184,12 +167,9 @@ Feature: Create comment as an user
     And I press "Check"
     # Wait for comment area init.
     And I wait until the page is ready
-    # Ensure travis won't fall.
-    And I wait "5" seconds
     Then I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(1)" "css_element" exists
     Then I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Check if delete button visible
@@ -199,11 +179,8 @@ Feature: Create comment as an user
     When I click on "Delete" "button" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-commands-box" "css_element"
     # Sometime behat seems very slow.
     And I wait until the page is ready
-    And I wait "5" seconds
     And I click on "[title='Delete comment']" "css_element" in the ".modal.show" "css_element"
     And I wait until the page is ready
-    # Ensure travis won't fall.
-    And I wait "5" seconds
     # Check comment is render as deleted and global count updated.
     Then I should see "Comment deleted" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-item-outerbox" "css_element"
     And I should see "0 of 0"
@@ -223,7 +200,6 @@ Feature: Create comment as an user
     When I enter the text "Comment 1" into the "Add comment" editor
     Then I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     When I press "Finish"
     Then I should not see "Please comment"
 
@@ -242,7 +218,6 @@ Feature: Create comment as an user
     And I press "Add comment"
     And I wait until the page is ready
     # Ensure travis won't fall.
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(1)" "css_element" exists
     Then I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Check if delete button visible
@@ -253,7 +228,6 @@ Feature: Create comment as an user
     And I click on "[title='Delete comment']" "css_element" in the ".modal.show" "css_element"
     And I wait until the page is ready
     # Ensure travis won't fall.
-    And I wait "5" seconds
     # Check comment is render as deleted and global count updated.
     Then I should see "Comment deleted" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-item-outerbox" "css_element"
     And I should see "0 of 0"
@@ -281,8 +255,6 @@ Feature: Create comment as an user
     When I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    # Ensure travis won't fall.
-    And I wait "5" seconds
     And I wait until ".studentquiz-comment-item:nth-child(1)" "css_element" exists
     Then I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Not visible!
@@ -326,11 +298,9 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
-    And I wait "5" seconds
     When I enter the text "Comment 2" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I log out
      # Student 3
     Given I log in as "student3"
@@ -343,7 +313,6 @@ Feature: Create comment as an user
     When I enter the text "Comment 3" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I log out
      # Student 4
     Given I log in as "student4"
@@ -356,7 +325,6 @@ Feature: Create comment as an user
     When I enter the text "Comment 4" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I log out
      # Student 5
     Given I log in as "student5"
@@ -369,7 +337,6 @@ Feature: Create comment as an user
     When I enter the text "Comment 5" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     And I log out
      # Log in as admin
     Given I log in as "admin"
@@ -379,12 +346,10 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
-    And I wait "5" seconds
     # Sort Date DESC (Default is Date ASC).
     When I click on "Date" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 5" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     Then I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     Then I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -393,7 +358,6 @@ Feature: Create comment as an user
     When I click on "Date" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 2" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     And I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -402,7 +366,6 @@ Feature: Create comment as an user
     When I click on "Forename" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 2" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 5" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -411,7 +374,6 @@ Feature: Create comment as an user
     When I click on "Forename" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     And I should see "Comment 5" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -420,7 +382,6 @@ Feature: Create comment as an user
     When I click on "Surname" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 5" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     And I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -429,7 +390,6 @@ Feature: Create comment as an user
     When I click on "Surname" "link" in the ".studentquiz-comment-filters" "css_element"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Comment 2" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     And I should see "Comment 4" in the ".studentquiz-comment-item:nth-child(2) .studentquiz-comment-text" "css_element"
     And I should see "Comment 3" in the ".studentquiz-comment-item:nth-child(3) .studentquiz-comment-text" "css_element"
@@ -443,7 +403,6 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Date" in the ".studentquiz-comment-filters" "css_element"
     And I should see "Forename" in the ".studentquiz-comment-filters" "css_element"
     And I should see "Surname" in the ".studentquiz-comment-filters" "css_element"
@@ -455,11 +414,9 @@ Feature: Create comment as an user
     And I press "Check"
     # Prevent behat fails (even single run is fine).
     And I wait until the page is ready
-    And I wait "5" seconds
     When I enter the text "Comment test user 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
-    And I wait "5" seconds
     Then I should see "Date" in the ".studentquiz-comment-filters" "css_element"
     And I should not see "Forename" in the ".studentquiz-comment-filters" "css_element"
     And I should not see "Surname" in the ".studentquiz-comment-filters" "css_element"

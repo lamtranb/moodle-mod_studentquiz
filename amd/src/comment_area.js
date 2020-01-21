@@ -255,10 +255,26 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 var count = self.countCommentAndReplies(response.data);
                                 var total = count.total;
                                 self.updateCommentCount(total, response.total);
-                                self.renderComment(response.data, true);
-                                M.util.js_complete(t.ACTION_EXPAND_ALL);
-                                return true;
+                                return self.renderComment(response.data, true).then(function(html) {
+                                    var comments = response.data;
+                                    // We render a lot of data, pure js here.
+                                    self.containerSelector[0].innerHTML = html;
+                                    // Turn off loading to show raw html first, then we bind events.
+                                    self.loadingIcon.hide();
+                                    // Loop to bind event.
+                                    for (var i = 0; i < comments.length; i++) {
+                                        self.bindCommentEvent(comments[i]);
+                                    }
+                                    self.changeWorkingState(false);
+                                    M.util.js_complete(t.ACTION_EXPAND_ALL);
+                                    return true;
+                                }).fail(function() {
+                                    self.changeWorkingState(false);
+                                    M.util.js_complete(t.ACTION_EXPAND_ALL);
+                                    return false;
+                                });
                             }).fail(function(err) {
+                                self.changeWorkingState(false);
                                 M.util.js_complete(t.ACTION_EXPAND_ALL);
                                 self.showError(err.message);
                                 return false;
@@ -269,6 +285,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         self.btnCollapseAll.click(function(e) {
                             e.preventDefault();
                             M.util.js_pending(t.ACTION_COLLAPSE_ALL);
+                            console.log('js pending');
                             self.changeWorkingState(true);
                             self.loadingIcon.show();
                             self.btnCollapseAll.hide();
@@ -280,19 +297,37 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                 var commentCount = count.commentCount;
                                 var deletedComments = count.totalDelete;
                                 // Only show expand button and count if comment existed.
-                                if (commentCount !== 0 || deletedComments !== 0) {
-                                    self.btnExpandAll.show();
-                                    self.updateCommentCount(commentCount, response.total);
-                                    self.renderComment(response.data, false);
-                                } else {
-                                    // No comment found hide loading icon.
+                                var isCommentsExist = commentCount !== 0 || deletedComments !== 0;
+                                if (!isCommentsExist) {
                                     self.loadingIcon.hide();
                                     self.changeWorkingState(false);
                                     self.updateCommentCount(0, 0);
+                                    M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                                    return true;
                                 }
-                                M.util.js_complete(t.ACTION_COLLAPSE_ALL);
-                                return true;
+                                self.btnExpandAll.show();
+                                self.updateCommentCount(commentCount, response.total);
+                                return self.renderComment(response.data, false).then(function(html) {
+                                    var comments = response.data;
+                                    // We render a lot of data, pure js here.
+                                    self.containerSelector[0].innerHTML = html;
+                                    // Turn off loading to show raw html first, then we bind events.
+                                    self.loadingIcon.hide();
+                                    // Loop to bind event.
+                                    for (var i = 0; i < comments.length; i++) {
+                                        self.bindCommentEvent(comments[i]);
+                                    }
+                                    self.changeWorkingState(false);
+                                    M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                                    console.log('js complete!');
+                                    return true;
+                                }).fail(function() {
+                                    self.changeWorkingState(false);
+                                    M.util.js_complete(t.ACTION_COLLAPSE_ALL);
+                                    return false;
+                                });
                             }).fail(function(err) {
+                                self.changeWorkingState(false);
                                 M.util.js_complete(t.ACTION_COLLAPSE_ALL);
                                 self.showError(err.message);
                                 return false;
@@ -563,27 +598,14 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                      *
                      * @param {Array} comments
                      * @param {Boolean} expanded
-                     * @returns {Boolean}
+                     * @returns {Promise}
                      */
                     renderComment: function(comments, expanded) {
                         var self = this;
-                        M.util.js_pending(t.ACTION_RENDER_COMMENT);
                         comments = self.convertForTemplate(comments, expanded);
-                        Templates.render(t.TEMPLATE_COMMENTS, {
+                        return Templates.render(t.TEMPLATE_COMMENTS, {
                             comments: comments
-                        }).done(function(html) {
-                            // We render a lot of data, pure js here.
-                            self.containerSelector[0].innerHTML = html;
-                            // Turn off loading to show raw html first, then we bind events.
-                            self.loadingIcon.hide();
-                            // Loop to bind event.
-                            for (var i = 0; i < comments.length; i++) {
-                                self.bindCommentEvent(comments[i]);
-                            }
-                            self.changeWorkingState(false);
-                            M.util.js_complete(t.ACTION_RENDER_COMMENT);
                         });
-                        return false;
                     },
 
                     /**
