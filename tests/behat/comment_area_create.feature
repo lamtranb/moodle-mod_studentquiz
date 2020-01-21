@@ -44,6 +44,7 @@ Feature: Create comment as an user
     And I press "Check"
     # Wait for comment area init.
     And I wait until the page is ready
+    And I wait "5" seconds
     # Enter "Comment 1".
     When I enter the text "Comment 1" into the "Add comment" editor
     Then I press "Add comment"
@@ -153,6 +154,7 @@ Feature: Create comment as an user
     And I press "Check"
     # Wait for comment area init.
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
@@ -218,6 +220,7 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     When I press "Finish"
     Then I should see "Please comment"
     When I enter the text "Comment 1" into the "Add comment" editor
@@ -238,6 +241,7 @@ Feature: Create comment as an user
     And I press "Check"
     # Wait for comment area init.
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
@@ -266,6 +270,7 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     And I should not see "Comment 1"
 
   @javascript
@@ -278,6 +283,7 @@ Feature: Create comment as an user
     And I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 1" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
@@ -304,6 +310,7 @@ Feature: Create comment as an user
     And I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     Then I should see "Report"
     # Test with Report feature.
     When I click on "Report" "button" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-commands-box" "css_element"
@@ -313,6 +320,7 @@ Feature: Create comment as an user
     Then I should see "Your report has been sent successfully"
     When I press "Continue"
     And I wait until the page is ready
+    And I wait "5" seconds
     # After report, check we navigate back.
     Then I should see "Add comment"
 
@@ -340,6 +348,7 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 3" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
@@ -353,6 +362,7 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 4" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
@@ -366,6 +376,7 @@ Feature: Create comment as an user
     Then I set the field "True" to "1"
     And I press "Check"
     And I wait until the page is ready
+    And I wait "5" seconds
     When I enter the text "Comment 5" into the "Add comment" editor
     And I press "Add comment"
     And I wait until the page is ready
