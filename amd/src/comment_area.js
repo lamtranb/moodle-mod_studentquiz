@@ -351,8 +351,7 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                                     // Clear form data.
                                     formSelector.trigger('reset');
                                     // Clear atto editor data.
-                                    formSelector.find('#id_editor_question_' + unique + 'editable').empty();
-                                    formSelector.find(t.SELECTOR.TEXTAREA).trigger('change');
+                                    self.forceClearAtto(formSelector, unique);
                                     M.util.js_complete(t.ACTION_CLEAR_FORM);
                                 });
                                 var data = self.convertForTemplate(response, true);
@@ -1456,6 +1455,32 @@ define(['jquery', 'core/str', 'core/ajax', 'core/modal_factory', 'core/templates
                         if ($.inArray(string, self.sortable) !== -1) {
                             self.sortFeature = string;
                         }
+                    },
+
+                    /**
+                     * Force clear Atto content.
+                     *
+                     * @param {jQuery} formSelector
+                     * @param {int} id
+                     */
+                    forceClearAtto: function(formSelector, id) {
+                        var textarea = formSelector.find('#id_editor_question_' + id + 'editable');
+                        // It seems the only way to check atto html mode is this attribute hidden (html mode = hidden).
+                        var checkHiddenTextarea = textarea.attr('hidden');
+                        // For some browsers, attr is undefined, for others is false.
+                        if (typeof checkHiddenTextarea !== typeof undefined && checkHiddenTextarea !== false) {
+                            // Ensure it's hidden.
+                            if (checkHiddenTextarea === 'hidden') {
+                                var htmlButton = formSelector.find('.atto_html_button');
+                                if (htmlButton.length !== 0) {
+                                    // Back to normal mode, not html mode.
+                                    htmlButton.trigger('click');
+                                }
+                            }
+                        }
+                        // Clear atto in normal mode.
+                        textarea.empty();
+                        formSelector.find(t.SELECTOR.TEXTAREA).trigger('change');
                     }
                 };
             },
