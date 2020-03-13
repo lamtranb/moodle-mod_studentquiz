@@ -2037,4 +2037,21 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'cmid' => $cmid
         ]);
     }
+
+    /**
+     * Returns HTML to display a help icon.
+     *
+     * Theme developers: DO NOT OVERRIDE! Please override function
+     * {@link core_renderer::render_help_icon()} instead.
+     *
+     * @param string $identifier The keyword that defines a help page
+     * @param string $component component name
+     * @param string|bool $linktext true means use $title as link text, string means link text value
+     * @return string HTML fragment
+     */
+    public function period_help_icon($identifier, $component) {
+        $icon = new \mod_studentquiz\local\component\help_icon($identifier, $component);
+        $data = $this->render($icon);
+        return $data;
+    }
 }

@@ -25,6 +25,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use mod_studentquiz\commentarea\form\comment_simple_editor;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot.'/course/moodleform_mod.php');
@@ -200,12 +202,13 @@ class mod_studentquiz_mod_form extends moodleform_mod {
         $mform->setDefault('forcecommenting', get_config('studentquiz', 'forcecommenting'));
 
         // Comment deletion period.
-        $mform->addElement('select', 'commentdeletionperiod',
+        $requiredfile = "$CFG->libdir/form/editor.php";
+        \MoodleQuickForm::registerElementType('comment_period_select', $requiredfile, \mod_studentquiz\local\component\comment_period_select::class);
+        $mform->addElement('comment_period_select', 'commentdeletionperiod',
                 get_string('settings_commentdeletionperiod', 'studentquiz'),
                 \mod_studentquiz\commentarea\container::get_deletion_period_options()
         );
         $mform->setType('commentdeletionperiod', PARAM_INT);
-        $mform->addHelpButton('commentdeletionperiod', 'settings_commentdeletionperiod', 'studentquiz');
         $mform->setDefault('commentdeletionperiod', get_config('studentquiz', 'commentdeletionperiod'));
 
         // Email address for reporting unacceptable comment for this studentquiz, default is blank.
