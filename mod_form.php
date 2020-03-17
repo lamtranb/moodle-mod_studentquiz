@@ -43,7 +43,7 @@ class mod_studentquiz_mod_form extends moodleform_mod {
      * Defines forms elements
      */
     public function definition() {
-        global $CFG;
+        global $CFG, $PAGE;
 
         $mform = $this->_form;
         $defaultqtypes = [];
@@ -193,7 +193,7 @@ class mod_studentquiz_mod_form extends moodleform_mod {
         // Comment sections.
         $mform->addElement('header', 'sectioncomment', get_string('settings_section_header_comment', 'studentquiz'));
 
-        // Field force commenting
+        // Field force commenting.
         $mform->addElement('checkbox', 'forcecommenting', get_string('settings_forcecommenting', 'studentquiz'));
         $mform->setType('forcecommenting', PARAM_INT);
         $mform->addHelpButton('forcecommenting', 'settings_forcecommenting', 'studentquiz');
@@ -205,8 +205,13 @@ class mod_studentquiz_mod_form extends moodleform_mod {
                 \mod_studentquiz\commentarea\container::get_deletion_period_options()
         );
         $mform->setType('commentdeletionperiod', PARAM_INT);
-        $mform->addHelpButton('commentdeletionperiod', 'settings_commentdeletionperiod', 'studentquiz');
         $mform->setDefault('commentdeletionperiod', get_config('studentquiz', 'commentdeletionperiod'));
+        /** @var mod_studentquiz_comment_renderer $commentrenderer */
+        $commentrenderer = $PAGE->get_renderer('mod_studentquiz', 'comment');
+        /** @var MoodleQuickForm_select $commentdeletionperiod */
+        $commentdeletionperiod = $mform->getElement('commentdeletionperiod');
+        $commentdeletionperiod->_helpbutton = $commentrenderer->comment_deletion_period_help_button(
+                'settings_commentdeletionperiod', 'studentquiz');
 
         // Email address for reporting unacceptable comment for this studentquiz, default is blank.
         $mform->addElement('text', 'reportingemail', get_string('settings_reportingemail', 'studentquiz'), ['size' => 64]);

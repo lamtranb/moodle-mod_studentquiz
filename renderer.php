@@ -2037,4 +2037,16 @@ class mod_studentquiz_comment_renderer extends mod_studentquiz_renderer {
                 'cmid' => $cmid
         ]);
     }
+
+    /**
+     * Render comment deletion period help button.
+     *
+     * @param string $identifier The keyword that defines a help page.
+     * @param string $component Component name.
+     * @return string
+     */
+    public function comment_deletion_period_help_button($identifier, $component) {
+        $icon = new \mod_studentquiz\local\component\help_icon($identifier, $component);
+        return $this->render($icon);
+    }
 }

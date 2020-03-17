@@ -444,3 +444,25 @@ Feature: Create comment as an user
     Then I should see "Comment 1" in the ".studentquiz-comment-item:nth-child(1) .studentquiz-comment-text" "css_element"
     # Check placeholder is back with correct text.
     And the "data-placeholder" attribute of ".editor_atto_content_wrap" "css_element" should contain "Enter your comment here ..."
+
+  @javascript
+  Scenario: Test comment deletion period help text.
+    Given I log in as "admin"
+    And I am on "Course 1" course homepage
+    When I follow "StudentQuiz 1"
+    And I navigate to "Edit settings" in current page administration
+    And I expand all fieldsets
+    And I click on "#fitem_id_commentdeletionperiod a[data-toggle=popover]" "css_element"
+    # Should see default value of comment deletion period in plugin setting.
+    Then I should see "Set the time period (in minutes) that the Delete button will be available to students to delete their own comment (or response to a comment) once it is posted. Values between 0-60 minutes are allowed, with the default being 10. If the deletion period is set to 0, students are unable to delete their own comments. Note that teachers and administrators will always be able to delete student comments, and also see the content of any deleted comment."
+    When I am on site homepage
+    And I navigate to "Plugins > Activity modules > StudentQuiz" in site administration
+    And I set the following fields to these values:
+      | Comment deletion period (minutes) | 50 |
+    And I press "Save changes"
+    And I am on "Course 1" course homepage
+    And I follow "StudentQuiz 1"
+    And I navigate to "Edit settings" in current page administration
+    And I expand all fieldsets
+    And I click on "#fitem_id_commentdeletionperiod a[data-toggle=popover]" "css_element"
+    Then I should see "Set the time period (in minutes) that the Delete button will be available to students to delete their own comment (or response to a comment) once it is posted. Values between 0-60 minutes are allowed, with the default being 50. If the deletion period is set to 0, students are unable to delete their own comments. Note that teachers and administrators will always be able to delete student comments, and also see the content of any deleted comment."
